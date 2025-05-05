@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit RFID</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #1e2a47;  /* Navy Blue */
+            color: #f1f1f1;  /* White Text */
+            padding: 20px;
+            max-width: 500px;
+            margin: auto;
+            text-align: center;
+        }
+
+        h1 {
+            color: #f1f1f1;
+            font-size: 36px;
+        }
+
+        form {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            background-color: #333;  /* Dark Gray Input */
+            color: #f1f1f1;  /* White Text */
+            border: 1px solid #555;
+            border-radius: 4px;
+            width: 250px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #1e2a47;  /* Navy Blue Button */
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #334b74;  /* Lighter Navy Blue Button */
+        }
+    </style>
+</head>
+<body>
+    <h1>Edit RFID</h1>
+
+    <form method="POST">
+        <input type="text" name="rfid" value="{{ tag.rfid }}" required>
+        <input type="text" name="label" value="{{ tag.label }}" required>
+        <button type="submit">Update</button>
+    </form>
+</body>
+</html>

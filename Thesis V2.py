@@ -1,7 +1,7 @@
 import serial
 
 def parse_epc(packet):
-    if len(packet) < 16:
+    if len(packet) < 23:
         return None
     epc_bytes = packet[3:15]
     epc = "".join("{:02X}".format(byte) for byte in epc_bytes)
@@ -23,7 +23,7 @@ print("Listening for RFID packets on COM4...")
 
 try:
     while True:
-        packet = ser.read(16)
+        packet = ser.read(23)
         if packet:
             epc = parse_epc(packet)
             if epc:
