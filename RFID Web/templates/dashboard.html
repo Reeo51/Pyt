@@ -2,11 +2,18 @@
 
 {% block content %}
 <div class="box">
-    <div style="display: flex; align-items: center; gap: 20px;">
-        <img src="{{ url_for('static', filename='DONB.png') }}" alt="Don Bosco Logo" style="height: 100px;">
-        <div style="font-size: 20px; font-weight: bold; line-height: 1.2;">
-            IoT-Based Indoor<br>
-            Positioning System
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <img src="{{ url_for('static', filename='DONB.png') }}" alt="Don Bosco Logo" style="height: 100px;">
+            <div style="font-size: 20px; font-weight: bold; line-height: 1.2;">
+                IoT-Based Indoor<br>
+                Positioning System
+            </div>
+        </div>
+
+        <!-- Real-time Clock Section -->
+        <div style="font-size: 24px;" id="clock">
+            <!-- Clock will be displayed here -->
         </div>
     </div>
 
@@ -36,7 +43,7 @@
                 <td>{{ tag.rfid }}</td>
                 <td>{{ tag.label }}</td>
                 <td>{{ tag.last_seen.split(' ')[0] if tag.last_seen else "N/A" }}</td>
-                <td>{{ tag.last_seen.split(' ')[1] if tag.last_seen else "N/A" }}</td>
+                <td>{{ tag.time_seen if tag.time_seen else "N/A" }}</td> <!-- Showing the time for each tag -->
                 <td>
                     <a href="{{ url_for('edit', id=tag.id) }}">Edit</a> |
                     <a href="{{ url_for('delete', id=tag.id) }}">Delete</a>
@@ -48,5 +55,18 @@
 
     <br>
     <a href="{{ url_for('logout') }}" style="display: inline-block; border: 2px solid red; padding: 5px 10px; color: red; text-decoration: none;">Logout</a>
+
 </div>
+
+<script>
+    function updateClock() {
+        var currentTime = new Date();
+        var hours = currentTime.getHours().toString().padStart(2, '0');
+        var minutes = currentTime.getMinutes().toString().padStart(2, '0');
+        var seconds = currentTime.getSeconds().toString().padStart(2, '0');
+        document.getElementById('clock').textContent = hours + ':' + minutes + ':' + seconds;
+    }
+
+    setInterval(updateClock, 1000); // Update clock every second
+</script>
 {% endblock %}

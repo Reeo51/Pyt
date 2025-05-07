@@ -55,7 +55,9 @@ def dashboard():
     if request.method == 'POST':
         rfid = request.form['rfid']
         label = request.form['label']
-        new_tag = Tag(rfid=rfid, label=label, last_seen="Not yet scanned", time_seen="N/A")
+        time_now = datetime.now().strftime("%H:%M:%S")  # Get the current time
+
+        new_tag = Tag(rfid=rfid, label=label, last_seen="Not yet scanned", time_seen=time_now)
         db.session.add(new_tag)
         db.session.commit()
         flash('RFID Tag added successfully!', 'success')
@@ -92,7 +94,7 @@ def edit(id):
         tag.rfid = request.form['rfid']
         tag.label = request.form['label']
         tag.last_seen = request.form['location']
-        tag.time_seen = datetime.now().strftime("%H:%M:%S")
+        tag.time_seen = datetime.now().strftime("%H:%M:%S")  # Save time when editing
         
         db.session.commit()
         flash('RFID Tag updated successfully!', 'success')
