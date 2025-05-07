@@ -4,38 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RFID Web</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"> <!-- External CSS link if you use one -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         body {
-            background-color: #f4f4f4;  /* Dirty white background */
+            background-color: #f4f4f4;
             font-family: Arial, sans-serif;
             color: #333;
-        }
-
-        header {
             text-align: center;
-            margin-top: 20px;
         }
-
         .content {
-            margin: 20px;
-            text-align: center;
-        }
-
-        /* Only apply this for the large logo */
-        .large-logo {
-            width: 200px;  /* Large logo size */
             margin: 20px auto;
-            display: block;
+            max-width: 600px;
         }
-
     </style>
 </head>
 <body>
-    <header>
-        <!-- Empty header or you can keep it if needed -->
-    </header>
-    
     <div class="content">
         {% block content %}{% endblock %}
     </div>

@@ -45,9 +45,17 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/dashboard')
+@app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
+    if request.method == 'POST':
+        rfid = request.form['rfid']
+        label = request.form['label']
+        new_tag = Tag(rfid=rfid, label=label, last_seen="N/A")
+        db.session.add(new_tag)
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+
     tags = Tag.query.all()
     return render_template('dashboard.html', tags=tags)
 
