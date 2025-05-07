@@ -17,16 +17,33 @@
         <button type="submit">Add RFID</button>
     </form>
 
-    <ul style="list-style: none; padding: 0; text-align: left; margin-top: 20px;">
-        {% for tag in tags %}
-            <li style="margin-bottom: 15px;">
-                <strong>{{ tag.rfid }}</strong>: {{ tag.label }}<br>
-                Last Seen: {{ tag.last_seen if tag.last_seen else "N/A" }}<br>
-                [<a href="{{ url_for('edit', id=tag.id) }}">Edit</a>]
-                [<a href="{{ url_for('delete', id=tag.id) }}">Delete</a>]
-            </li>
-        {% endfor %}
-    </ul>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">RFID</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">Label</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">Last Seen</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">Time</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tag in tags %}
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ tag.id }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ tag.rfid }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ tag.label }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ tag.last_seen.split(' ')[0] if tag.last_seen else "N/A" }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ tag.last_seen.split(' ')[1] if tag.last_seen else "N/A" }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">
+                    <a href="{{ url_for('edit', id=tag.id) }}">Edit</a> |
+                    <a href="{{ url_for('delete', id=tag.id) }}">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
     <a href="{{ url_for('logout') }}">Logout</a>
 </div>
