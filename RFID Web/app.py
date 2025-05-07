@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import UserMixin, LoginManager, login_user, login_required, current_user, logout_user
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecretkey'
@@ -51,11 +52,15 @@ def dashboard():
     if request.method == 'POST':
         rfid = request.form['rfid']
         label = request.form['label']
-        new_tag = Tag(rfid=rfid, label=label, last_seen="N/A")
-        db.session.add(new_tag)
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        existing = Tag.query.filter_by(rfid=rfid).first()
+        if existing:
+            existing.last_seen = timestamp
+            existing.label = label
+        else:
+            new_tag = Tag(rfid=rfid, label=label, last_seen=timestamp)
+            db.session.add(new_tag)
         db.session.commit()
-        return redirect(url_for('dashboard'))
-
     tags = Tag.query.all()
     return render_template('dashboard.html', tags=tags)
 
@@ -76,8 +81,26 @@ def register():
         db.session.commit()
         flash('Your account has been created!', 'success')
         return redirect(url_for('login'))
-
     return render_template('register.html')
+
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit(id):
+    tag = Tag.query.get_or_404(id)
+    if request.method == 'POST':
+        tag.rfid = request.form['rfid']
+        tag.label = request.form['label']
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+    return render_template('edit.html', tag=tag)
+
+@app.route('/delete/<int:id>')
+@login_required
+def delete(id):
+    tag = Tag.query.get_or_404(id)
+    db.session.delete(tag)
+    db.session.commit()
+    return redirect(url_for('dashboard'))
 
 # Create all database tables
 with app.app_context():

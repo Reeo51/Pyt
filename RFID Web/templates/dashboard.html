@@ -1,31 +1,33 @@
 {% extends "layout.html" %}
 {% block content %}
-<img src="{{ url_for('static', filename='DONB.png') }}" alt="Don Bosco Logo" style="height: 140px;"><br><br>
-<h2>Dashboard</h2>
+<div class="box">
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+        <img src="{{ url_for('static', filename='DONB.png') }}" alt="Don Bosco Logo" style="height: 100px;">
+        <div style="font-size: 20px; font-weight: bold; line-height: 1.2;">
+            IoT-Based Indoor<br>
+            Positioning System
+        </div>
+    </div>
 
-<form method="POST">
-    <input type="text" name="rfid" placeholder="Enter RFID" required>
-    <input type="text" name="label" placeholder="Enter Label" required>
-    <button type="submit">Add RFID</button>
-</form>
+    <h1>RFID Tag Manager</h1>
 
-<h3>RFID List</h3>
-<table border="1" style="margin: 10px auto;">
-    <tr>
-        <th>ID</th>
-        <th>RFID</th>
-        <th>Label</th>
-        <th>Last Seen</th>
-    </tr>
-    {% for tag in tags %}
-    <tr>
-        <td>{{ tag.id }}</td>
-        <td>{{ tag.rfid }}</td>
-        <td>{{ tag.label }}</td>
-        <td>{{ tag.last_seen }}</td>
-    </tr>
-    {% endfor %}
-</table>
+    <form method="POST">
+        <input type="text" name="rfid" placeholder="Enter RFID" required>
+        <input type="text" name="label" placeholder="Enter Label" required>
+        <button type="submit">Add RFID</button>
+    </form>
 
-<a href="{{ url_for('logout') }}">Logout</a>
+    <ul style="list-style: none; padding: 0; text-align: left; margin-top: 20px;">
+        {% for tag in tags %}
+            <li style="margin-bottom: 15px;">
+                <strong>{{ tag.rfid }}</strong>: {{ tag.label }}<br>
+                Last Seen: {{ tag.last_seen if tag.last_seen else "N/A" }}<br>
+                [<a href="{{ url_for('edit', id=tag.id) }}">Edit</a>]
+                [<a href="{{ url_for('delete', id=tag.id) }}">Delete</a>]
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
 {% endblock %}
