@@ -22,6 +22,7 @@ class Tag(db.Model):
     rfid = db.Column(db.String(120), unique=True, nullable=False)
     label = db.Column(db.String(120), nullable=False)
     last_seen = db.Column(db.String(120), nullable=False)
+    time_seen = db.Column(db.String(120), nullable=False)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -46,40 +47,11 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/dashboard', methods=['GET', 'POST'])
+@app.route('/dashboard')
 @login_required
 def dashboard():
-    if request.method == 'POST':
-        rfid = request.form['rfid']
-        label = request.form['label']
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        new_tag = Tag(rfid=rfid, label=label, last_seen=timestamp)
-        db.session.add(new_tag)
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-
     tags = Tag.query.all()
     return render_template('dashboard.html', tags=tags)
-
-@app.route('/edit/<int:id>', methods=['GET', 'POST'])
-@login_required
-def edit(id):
-    tag = Tag.query.get_or_404(id)
-    if request.method == 'POST':
-        tag.rfid = request.form['rfid']
-        tag.label = request.form['label']
-        tag.last_seen = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-    return render_template('edit.html', tag=tag)
-
-@app.route('/delete/<int:id>')
-@login_required
-def delete(id):
-    tag = Tag.query.get_or_404(id)
-    db.session.delete(tag)
-    db.session.commit()
-    return redirect(url_for('dashboard'))
 
 @app.route('/logout')
 @login_required
@@ -100,6 +72,47 @@ def register():
         return redirect(url_for('login'))
 
     return render_template('register.html')
+
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit(id):
+    tag = Tag.query.get_or_404(id)
+
+    if request.method == 'POST':
+        tag.rfid = request.form['rfid']
+        tag.label = request.form['label']
+        tag.last_seen = request.form['location']
+        tag.time_seen = datetime.now().strftime("%H:%M:%S")
+        
+        db.session.commit()
+        flash('RFID Tag updated successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('edit.html', tag=tag)
+
+# Delete Route
+@app.route('/delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def delete(id):
+    tag = Tag.query.get_or_404(id)
+    db.session.delete(tag)
+    db.session.commit()
+    flash('RFID Tag deleted successfully!', 'success')
+    return redirect(url_for('dashboard'))
+
+# Example endpoint to simulate RFID scan (to be replaced with actual RFID handler)
+@app.route('/scan/<rfid>/<location>')
+def scan_rfid(rfid, location):
+    tag = Tag.query.filter_by(rfid=rfid).first()
+    time_now = datetime.now().strftime("%H:%M:%S")
+    if tag:
+        tag.last_seen = location
+        tag.time_seen = time_now
+    else:
+        tag = Tag(rfid=rfid, label="New Tag", last_seen=location, time_seen=time_now)
+        db.session.add(tag)
+    db.session.commit()
+    return f"RFID {rfid} scanned at {location} at {time_now}"
 
 with app.app_context():
     db.create_all()

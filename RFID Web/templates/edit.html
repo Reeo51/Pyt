@@ -1,12 +1,15 @@
 {% extends "layout.html" %}
 {% block content %}
 <div class="box">
-    <h2>Edit Tag</h2>
+    <h1>Edit RFID Tag</h1>
+
     <form method="POST">
         <input type="text" name="rfid" value="{{ tag.rfid }}" required>
         <input type="text" name="label" value="{{ tag.label }}" required>
-        <button type="submit">Update</button>
+        <input type="text" name="location" value="{{ tag.last_seen }}" required>
+        <button type="submit">Update RFID</button>
     </form>
+
     <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
 </div>
 {% endblock %}
