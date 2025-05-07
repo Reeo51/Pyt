@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RFID System</title>
+</head>
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='DONB.png') }}" alt="School Logo" width="100">
+        {% if session.get('username') %}
+            <p>Welcome, {{ session.get('username') }} | <a href="{{ url_for('logout') }}">Logout</a></p>
+        {% endif %}
+        <hr>
+    </header>
+    {% block content %}{% endblock %}
+</body>
+</html>
