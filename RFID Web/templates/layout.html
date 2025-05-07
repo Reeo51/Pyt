@@ -1,16 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>RFID System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFID Web</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"> <!-- External CSS link if you use one -->
+    <style>
+        body {
+            background-color: #f4f4f4;  /* Dirty white background */
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        header img {
+            height: 60px;  /* Adjust logo size */
+        }
+
+        .content {
+            margin: 20px;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <img src="{{ url_for('static', filename='DONB.png') }}" alt="School Logo" width="100">
-        {% if session.get('username') %}
-            <p>Welcome, {{ session.get('username') }} | <a href="{{ url_for('logout') }}">Logout</a></p>
-        {% endif %}
-        <hr>
+        <!-- Place logo here -->
+        <img src="{{ url_for('static', filename='DONB.png') }}" alt="Don Bosco Logo">
     </header>
-    {% block content %}{% endblock %}
+    
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
 </body>
 </html>

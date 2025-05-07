@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Dashboard</h2>
+<h3>RFID Tags</h3>
+<table border="1">
+    <thead>
+        <tr>
+            <th>RFID</th>
+            <th>Label</th>
+            <th>Last Seen</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tag in tags %}
+        <tr>
+            <td>{{ tag.rfid }}</td>
+            <td>{{ tag.label }}</td>
+            <td>{{ tag.last_seen }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

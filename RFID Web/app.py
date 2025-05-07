@@ -1,45 +1,35 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-import os
+from flask_bcrypt import Bcrypt
+from flask_login import UserMixin, LoginManager, login_user, login_required, current_user, logout_user
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Replace with a secure key
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SECRET_KEY'] = 'mysecretkey'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///rfid.db'
 db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
-# User model
-class User(db.Model):
+class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+    username = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
 
-# Home page
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rfid = db.Column(db.String(120), unique=True, nullable=False)
+    label = db.Column(db.String(120), nullable=False)
+    last_seen = db.Column(db.String(120), nullable=False)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 @app.route('/')
-def index():
-    if 'user_id' in session:
-        return render_template('index.html', username=session.get('username'))
+def home():
     return redirect(url_for('login'))
 
-# Registration
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = generate_password_hash(request.form['password'])
-
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists')
-            return redirect(url_for('register'))
-
-        new_user = User(username=username, password=password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('Registration successful. Please log in.')
-        return redirect(url_for('login'))
-    return render_template('register.html')
-
-# Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -47,24 +37,43 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
 
-        if user and check_password_hash(user.password, password):
-            session['user_id'] = user.id
-            session['username'] = user.username
-            return redirect(url_for('index'))
+        if user and bcrypt.check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('dashboard'))
         else:
-            flash('Invalid username or password')
-            return redirect(url_for('login'))
+            flash('Login Unsuccessful. Please check username and password', 'danger')
 
     return render_template('login.html')
 
-# Logout
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    tags = Tag.query.all()
+    return render_template('dashboard.html', tags=tags)
+
 @app.route('/logout')
+@login_required
 def logout():
-    session.clear()
+    logout_user()
     return redirect(url_for('login'))
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+        new_user = User(username=username, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Your account has been created!', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+# Create all database tables
+with app.app_context():
+    db.create_all()
+
 if __name__ == '__main__':
-    if not os.path.exists('users.db'):
-        with app.app_context():
-            db.create_all()
     app.run(debug=True)

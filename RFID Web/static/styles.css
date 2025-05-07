@@ -1,0 +1,19 @@
+/* styles.css */
+body {
+    background-color: #f4f4f4; /* Dirty white background */
+    font-family: Arial, sans-serif;
+    color: #333;
+}
+
+header {
+    text-align: center;
+    margin-top: 20px;
+}
+
+header img {
+    height: 60px; /* Adjust logo size */
+}
+
+.content {
+    margin: 20px;
+}

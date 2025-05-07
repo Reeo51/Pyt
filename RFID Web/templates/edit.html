@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit RFID</title>
+    <title>Edit RFID Tag</title>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
             background-color: #1e2a47;  /* Navy Blue */
             color: #f1f1f1;  /* White Text */
             padding: 20px;
-            max-width: 500px;
+            max-width: 600px;
             margin: auto;
             text-align: center;
         }
@@ -22,23 +22,23 @@
 
         form {
             display: flex;
+            flex-direction: column;
             gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
+            align-items: center;
         }
 
         input[type="text"] {
             padding: 10px;
-            background-color: #333;  /* Dark Gray Input */
-            color: #f1f1f1;  /* White Text */
+            background-color: #333;
+            color: #f1f1f1;
             border: 1px solid #555;
             border-radius: 4px;
-            width: 250px;
+            width: 300px;
         }
 
         button {
             padding: 10px 20px;
-            background-color: #1e2a47;  /* Navy Blue Button */
+            background-color: #1e2a47;
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -46,16 +46,17 @@
         }
 
         button:hover {
-            background-color: #334b74;  /* Lighter Navy Blue Button */
+            background-color: #334b74;
         }
     </style>
 </head>
 <body>
-    <h1>Edit RFID</h1>
+    <h1>Edit RFID Tag</h1>
 
     <form method="POST">
         <input type="text" name="rfid" value="{{ tag.rfid }}" required>
         <input type="text" name="label" value="{{ tag.label }}" required>
+        <input type="text" name="last_seen" value="{{ tag.last_seen }}">
         <button type="submit">Update</button>
     </form>
 </body>

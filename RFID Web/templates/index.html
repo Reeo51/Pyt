@@ -98,9 +98,9 @@
     <ul>
         {% for tag in tags %}
             <li>
-                <strong>{{ tag.rfid }}</strong>: {{ tag.label }}
-                [<a href="{{ url_for('edit', id=loop.index0) }}">Edit</a>]
-                [<a href="{{ url_for('delete', id=loop.index0) }}">Delete</a>]
+                <strong>{{ tag.rfid }}</strong>: {{ tag.label }} (Last Seen: {{ tag.last_seen if tag.last_seen else "N/A" }})
+                [<a href="{{ url_for('edit', id=tag.id) }}">Edit</a>]
+                [<a href="{{ url_for('delete', id=tag.id) }}">Delete</a>]
             </li>
         {% endfor %}
     </ul>
@@ -108,4 +108,3 @@
 </html>
 
 {% endblock %}
-
