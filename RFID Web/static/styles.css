@@ -1,19 +1,50 @@
-/* styles.css */
-body {
-    background-color: #f4f4f4; /* Dirty white background */
-    font-family: Arial, sans-serif;
-    color: #333;
+/* Style for the large logo (in both login and dashboard pages) */
+.large-logo {
+    width: 200px;  /* Larger logo size */
+    margin: 20px auto;
+    display: block;
 }
 
-header {
+/* Center the login form */
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 50px;
+}
+
+/* Center the dashboard content */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 50px;
     text-align: center;
-    margin-top: 20px;
 }
 
-header img {
-    height: 60px; /* Adjust logo size */
+/* Style for form input fields and submit button */
+.login-container .form-group input[type="text"],
+.login-container .form-group input[type="password"] {
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #333;
+    color: white;
+    border-radius: 5px;
+    width: 250px;
+    border: 1px solid #555;
 }
 
-.content {
-    margin: 20px;
+.login-container .form-group input[type="submit"] {
+    padding: 10px 20px;
+    background-color: #1e2a47;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.login-container .form-group input[type="submit"]:hover {
+    background-color: #334b74;
 }

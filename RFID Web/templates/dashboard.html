@@ -1,23 +1,25 @@
 {% extends "layout.html" %}
 {% block content %}
-<h2>Dashboard</h2>
-<h3>RFID Tags</h3>
-<table border="1">
-    <thead>
-        <tr>
-            <th>RFID</th>
-            <th>Label</th>
-            <th>Last Seen</th>
-        </tr>
-    </thead>
-    <tbody>
+<div style="max-width: 800px; margin: auto; text-align: center;">
+    <img src="{{ url_for('static', filename='DONB.png') }}" alt="School Logo" style="width: 180px; margin-bottom: 20px;">
+    <h1>RFID Tag Manager</h1>
+
+    <form method="POST" style="margin-bottom: 20px;">
+        <input type="text" name="rfid" placeholder="Enter RFID" required>
+        <input type="text" name="label" placeholder="Enter Label" required>
+        <button type="submit">Add RFID</button>
+    </form>
+
+    <ul style="list-style: none; padding: 0;">
         {% for tag in tags %}
-        <tr>
-            <td>{{ tag.rfid }}</td>
-            <td>{{ tag.label }}</td>
-            <td>{{ tag.last_seen }}</td>
-        </tr>
+            <li>
+                <strong>{{ tag.rfid }}</strong>: {{ tag.label }} (Last Seen: {{ tag.last_seen if tag.last_seen else "N/A" }})
+                [<a href="{{ url_for('edit', id=tag.id) }}">Edit</a>]
+                [<a href="{{ url_for('delete', id=tag.id) }}">Delete</a>]
+            </li>
         {% endfor %}
-    </tbody>
-</table>
+    </ul>
+
+    <a href="{{ url_for('logout') }}"><button>Logout</button></a>
+</div>
 {% endblock %}
