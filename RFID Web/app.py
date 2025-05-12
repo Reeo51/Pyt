@@ -126,8 +126,10 @@ def scan_rfid(rfid, location):
     db.session.commit()
     return f"RFID {rfid} scanned at {location} at {time_now}"
 
+# This line ensures the database tables are created when the app is first run
 with app.app_context():
     db.create_all()
 
+# To make the Flask app accessible on the local network, use 0.0.0.0 for host
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
