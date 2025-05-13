@@ -60,7 +60,15 @@ def login():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    tags = Tag.query.all()  # Query all tags from the database
+    search_query = request.args.get('search')  # Get the search query if any
+
+    if search_query:
+        tags = Tag.query.filter(
+            (Tag.rfid.like(f"%{search_query}%")) | 
+            (Tag.label.like(f"%{search_query}%"))
+        ).all()  # Filter tags by RFID or Label
+    else:
+        tags = Tag.query.all()  # Get all tags if no search query
 
     if request.method == 'POST':
         rfid = request.form['rfid']

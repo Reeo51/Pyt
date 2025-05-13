@@ -3,6 +3,11 @@
 {% block content %}
 <div class="box">
     <h2>Dashboard</h2>
+    <form method="GET" action="{{ url_for('dashboard') }}" style="margin-bottom: 20px;">
+        <input type="text" name="search" placeholder="Search RFID or Label" value="{{ request.args.get('search') }}" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="submit" value="Search" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+    </form>
+
     <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
         <input type="text" name="rfid" placeholder="RFID" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
         <input type="text" name="label" placeholder="Label" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
@@ -27,54 +32,17 @@
                 <td style="padding: 8px;">{{ tag.last_seen }}</td>
                 <td style="padding: 8px;">{{ tag.time_seen }}</td>
                 <td style="padding: 8px;">
-                    <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> |
+                    <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
                     <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <!-- Logout button -->
+    <div style="position: absolute; bottom: 20px; right: 20px;">
+        <a href="{{ url_for('logout') }}" style="padding: 10px 20px; background-color: red; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
+    </div>
 </div>
-
-<script>
-    const eventSource = new EventSource('/events');
-
-    eventSource.onmessage = function (event) {
-        const newTag = JSON.parse(event.data);
-        const tagsList = document.getElementById('tags-list');
-
-        // Look for an existing row with the same RFID
-        const existingRow = tagsList.querySelector(`tr[data-rfid="${newTag.rfid}"]`);
-
-        if (existingRow) {
-            // Update the existing row
-            existingRow.innerHTML = `
-                <td style="padding: 8px;">${newTag.rfid}</td>
-                <td style="padding: 8px;">${newTag.label}</td>
-                <td style="padding: 8px;">${newTag.last_seen}</td>
-                <td style="padding: 8px;">${newTag.time_seen}</td>
-                <td style="padding: 8px;">
-                    <a href="/edit/${newTag.id}" style="text-decoration: none; color: #4CAF50;">Edit</a> |
-                    <a href="/delete/${newTag.id}" style="text-decoration: none; color: red;">Delete</a>
-                </td>
-            `;
-        } else {
-            // Create a new row
-            const newRow = document.createElement('tr');
-            newRow.style.borderBottom = "1px solid #ddd";
-            newRow.setAttribute("data-rfid", newTag.rfid);
-            newRow.innerHTML = `
-                <td style="padding: 8px;">${newTag.rfid}</td>
-                <td style="padding: 8px;">${newTag.label}</td>
-                <td style="padding: 8px;">${newTag.last_seen}</td>
-                <td style="padding: 8px;">${newTag.time_seen}</td>
-                <td style="padding: 8px;">
-                    <a href="/edit/${newTag.id}" style="text-decoration: none; color: #4CAF50;">Edit</a> |
-                    <a href="/delete/${newTag.id}" style="text-decoration: none; color: red;">Delete</a>
-                </td>
-            `;
-            tagsList.appendChild(newRow);
-        }
-    };
-</script>
 {% endblock %}
