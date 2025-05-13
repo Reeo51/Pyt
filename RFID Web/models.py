@@ -4,4 +4,4 @@ class Tag(db.Model):
     label = db.Column(db.String(120), nullable=False)
     last_seen = db.Column(db.String(120), nullable=False)
     time_seen = db.Column(db.String(120), nullable=False)
-    last_changed_by = db.Column(db.String(120), nullable=True)  
+    last_changed_by = db.Column(db.String(120), nullable=True)  #
