@@ -2,71 +2,79 @@
 
 {% block content %}
 <div class="box">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <img src="{{ url_for('static', filename='DONB.png') }}" alt="Don Bosco Logo" style="height: 100px;">
-            <div style="font-size: 20px; font-weight: bold; line-height: 1.2;">
-                IoT-Based Indoor<br>
-                Positioning System
-            </div>
-        </div>
-
-        <!-- Real-time Clock Section -->
-        <div style="font-size: 24px;" id="clock">
-            <!-- Clock will be displayed here -->
-        </div>
-    </div>
-
-    <h2>RFID Tag Manager</h2>
-
-    <form method="POST">
-        <input type="text" name="rfid" placeholder="Enter RFID" required>
-        <input type="text" name="label" placeholder="Enter Label" required>
-        <button type="submit">Add RFID</button>
+    <h2>Dashboard</h2>
+    <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+        <input type="text" name="rfid" placeholder="RFID" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="text" name="label" placeholder="Label" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="submit" value="Add RFID" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
     </form>
 
-    <table>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>RFID</th>
-                <th>Label</th>
-                <th>Last Seen</th>
-                <th>Time</th>
-                <th>Actions</th>
+            <tr style="background-color: #f4f4f4; text-align: left;">
+                <th style="padding: 8px;">RFID</th>
+                <th style="padding: 8px;">Label</th>
+                <th style="padding: 8px;">Last Seen</th>
+                <th style="padding: 8px;">Time Seen</th>
+                <th style="padding: 8px;">Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="tags-list">
             {% for tag in tags %}
-            <tr>
-                <td>{{ tag.id }}</td>
-                <td>{{ tag.rfid }}</td>
-                <td>{{ tag.label }}</td>
-                <td>{{ tag.last_seen.split(' ')[0] if tag.last_seen else "N/A" }}</td>
-                <td>{{ tag.time_seen if tag.time_seen else "N/A" }}</td> <!-- Showing the time for each tag -->
-                <td>
-                    <a href="{{ url_for('edit', id=tag.id) }}">Edit</a> |
-                    <a href="{{ url_for('delete', id=tag.id) }}">Delete</a>
+            <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
+                <td style="padding: 8px;">{{ tag.rfid }}</td>
+                <td style="padding: 8px;">{{ tag.label }}</td>
+                <td style="padding: 8px;">{{ tag.last_seen }}</td>
+                <td style="padding: 8px;">{{ tag.time_seen }}</td>
+                <td style="padding: 8px;">
+                    <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> |
+                    <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-
-    <br>
-    <a href="{{ url_for('logout') }}" style="display: inline-block; border: 2px solid red; padding: 5px 10px; color: red; text-decoration: none;">Logout</a>
-
 </div>
 
 <script>
-    function updateClock() {
-        var currentTime = new Date();
-        var hours = currentTime.getHours().toString().padStart(2, '0');
-        var minutes = currentTime.getMinutes().toString().padStart(2, '0');
-        var seconds = currentTime.getSeconds().toString().padStart(2, '0');
-        document.getElementById('clock').textContent = hours + ':' + minutes + ':' + seconds;
-    }
+    const eventSource = new EventSource('/events');
 
-    setInterval(updateClock, 1000); // Update clock every second
+    eventSource.onmessage = function (event) {
+        const newTag = JSON.parse(event.data);
+        const tagsList = document.getElementById('tags-list');
+
+        // Look for an existing row with the same RFID
+        const existingRow = tagsList.querySelector(`tr[data-rfid="${newTag.rfid}"]`);
+
+        if (existingRow) {
+            // Update the existing row
+            existingRow.innerHTML = `
+                <td style="padding: 8px;">${newTag.rfid}</td>
+                <td style="padding: 8px;">${newTag.label}</td>
+                <td style="padding: 8px;">${newTag.last_seen}</td>
+                <td style="padding: 8px;">${newTag.time_seen}</td>
+                <td style="padding: 8px;">
+                    <a href="/edit/${newTag.id}" style="text-decoration: none; color: #4CAF50;">Edit</a> |
+                    <a href="/delete/${newTag.id}" style="text-decoration: none; color: red;">Delete</a>
+                </td>
+            `;
+        } else {
+            // Create a new row
+            const newRow = document.createElement('tr');
+            newRow.style.borderBottom = "1px solid #ddd";
+            newRow.setAttribute("data-rfid", newTag.rfid);
+            newRow.innerHTML = `
+                <td style="padding: 8px;">${newTag.rfid}</td>
+                <td style="padding: 8px;">${newTag.label}</td>
+                <td style="padding: 8px;">${newTag.last_seen}</td>
+                <td style="padding: 8px;">${newTag.time_seen}</td>
+                <td style="padding: 8px;">
+                    <a href="/edit/${newTag.id}" style="text-decoration: none; color: #4CAF50;">Edit</a> |
+                    <a href="/delete/${newTag.id}" style="text-decoration: none; color: red;">Delete</a>
+                </td>
+            `;
+            tagsList.appendChild(newRow);
+        }
+    };
 </script>
 {% endblock %}
