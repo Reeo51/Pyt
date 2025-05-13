@@ -1,48 +1,50 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="box">
-    <h2>Dashboard</h2>
-    <form method="GET" action="{{ url_for('dashboard') }}" style="margin-bottom: 20px;">
-        <input type="text" name="search" placeholder="Search RFID or Label" value="{{ request.args.get('search') }}" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
-        <input type="submit" value="Search" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-    </form>
+    <meta http-equiv="refresh" content="5">  <!-- Page auto-refresh every 5 seconds -->
 
-    <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-        <input type="text" name="rfid" placeholder="RFID" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
-        <input type="text" name="label" placeholder="Label" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
-        <input type="submit" value="Add RFID" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-    </form>
+    <div class="box">
+        <h2>Dashboard</h2>
+        <form method="GET" action="{{ url_for('dashboard') }}" style="margin-bottom: 20px;">
+            <input type="text" name="search" placeholder="Search RFID or Label" value="{{ request.args.get('search') }}" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+            <input type="submit" value="Search" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        </form>
 
-    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-        <thead>
-            <tr style="background-color: #f4f4f4; text-align: left;">
-                <th style="padding: 8px;">RFID</th>
-                <th style="padding: 8px;">Label</th>
-                <th style="padding: 8px;">Last Seen</th>
-                <th style="padding: 8px;">Time Seen</th>
-                <th style="padding: 8px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody id="tags-list">
-            {% for tag in tags %}
-            <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
-                <td style="padding: 8px;">{{ tag.rfid }}</td>
-                <td style="padding: 8px;">{{ tag.label }}</td>
-                <td style="padding: 8px;">{{ tag.last_seen }}</td>
-                <td style="padding: 8px;">{{ tag.time_seen }}</td>
-                <td style="padding: 8px;">
-                    <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
-                    <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            <input type="text" name="rfid" placeholder="RFID" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+            <input type="text" name="label" placeholder="Label" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+            <input type="submit" value="Add RFID" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        </form>
 
-    <!-- Logout button -->
-    <div style="position: absolute; bottom: 20px; right: 20px;">
-        <a href="{{ url_for('logout') }}" style="padding: 10px 20px; background-color: red; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+                <tr style="background-color: #f4f4f4; text-align: left;">
+                    <th style="padding: 8px;">RFID</th>
+                    <th style="padding: 8px;">Label</th>
+                    <th style="padding: 8px;">Last Seen</th>
+                    <th style="padding: 8px;">Time Seen</th>
+                    <th style="padding: 8px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tags-list">
+                {% for tag in tags %}
+                <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
+                    <td style="padding: 8px;">{{ tag.rfid }}</td>
+                    <td style="padding: 8px;">{{ tag.label }}</td>
+                    <td style="padding: 8px;">{{ tag.last_seen }}</td>
+                    <td style="padding: 8px;">{{ tag.time_seen }}</td>
+                    <td style="padding: 8px;">
+                        <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
+                        <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Logout Button -->
+        <div style="margin-top: 20px; text-align: right;">
+            <a href="{{ url_for('logout') }}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
+        </div>
     </div>
-</div>
 {% endblock %}
