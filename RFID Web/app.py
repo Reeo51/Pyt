@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash, Res
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import UserMixin, LoginManager, login_user, login_required, current_user, logout_user
+from flask_migrate import Migrate  # Import Flask-Migrate
 from datetime import datetime
 import time
 import json
@@ -19,6 +20,9 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# Set up Flask-Migrate
+migrate = Migrate(app, db)
+
 # Database Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -31,11 +35,25 @@ class Tag(db.Model):
     label = db.Column(db.String(120), nullable=False)
     last_seen = db.Column(db.String(120), nullable=False)
     time_seen = db.Column(db.String(120), nullable=False)
+    last_changed_by = db.Column(db.String(120), nullable=True)  # Added last_changed_by column
 
 # User loader
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))  # Updated to use db.session.get()
+
+# Autosave background task function
+def autosave():
+    while True:
+        time.sleep(5)  # Save every 5 seconds, you can adjust this
+        db.session.commit()  # Commit changes to the database
+        print("Database autosaved.")
+
+# Start autosave thread
+def start_autosave():
+    autosave_thread = threading.Thread(target=autosave)
+    autosave_thread.daemon = True
+    autosave_thread.start()
 
 # Routes
 @app.route('/')
@@ -94,12 +112,23 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        new_user = User(username=username, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('Your account has been created!', 'success')
-        return redirect(url_for('login'))
+        
+        # Check if the username already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already exists! Please choose a different username.', 'danger')
+            return redirect(url_for('register'))
+
+        try:
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            new_user = User(username=username, password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Your account has been created!', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash(f'An error occurred: {str(e)}', 'danger')
+            return redirect(url_for('register'))
 
     return render_template('register.html')
 
@@ -109,10 +138,11 @@ def edit(id):
     tag = Tag.query.get_or_404(id)
 
     if request.method == 'POST':
-        tag.rfid = request.form['rfid']
+        # Only update label and last_seen (location)
         tag.label = request.form['label']
-        tag.last_seen = request.form['location']
+        tag.last_seen = request.form['last_seen']
         tag.time_seen = datetime.now().strftime("%H:%M:%S")  # Save time when editing
+        tag.last_changed_by = current_user.username  # Save who edited the tag
         
         db.session.commit()
         flash('RFID Tag updated successfully!', 'success')
@@ -209,6 +239,7 @@ def run_rfid_scanner():
 
 # Run the RFID scanner in a background thread
 if __name__ == '__main__':
+    start_autosave()  # Start the autosave function
     rfid_thread = threading.Thread(target=run_rfid_scanner)
     rfid_thread.daemon = True
     rfid_thread.start()

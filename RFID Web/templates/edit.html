@@ -1,15 +1,18 @@
 {% extends "layout.html" %}
+
 {% block content %}
 <div class="box">
-    <h1>Edit RFID Tag</h1>
-
-    <form method="POST">
-        <input type="text" name="rfid" value="{{ tag.rfid }}" required>
-        <input type="text" name="label" value="{{ tag.label }}" required>
-        <input type="text" name="location" value="{{ tag.last_seen }}" required>
-        <button type="submit">Update RFID</button>
+    <h2>Edit RFID Tag</h2>
+    
+    <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+        <!-- Only editing Label and Last Seen -->
+        <input type="text" name="label" value="{{ tag.label }}" placeholder="Label" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="text" name="last_seen" value="{{ tag.last_seen }}" placeholder="Last Seen" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="submit" value="Save Changes" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
     </form>
 
-    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    <div style="margin-top: 20px; text-align: right;">
+        <a href="{{ url_for('dashboard') }}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Back to Dashboard</a>
+    </div>
 </div>
 {% endblock %}

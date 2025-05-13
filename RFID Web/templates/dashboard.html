@@ -24,6 +24,7 @@
                     <th style="padding: 8px;">Last Seen</th>
                     <th style="padding: 8px;">Time Seen</th>
                     <th style="padding: 8px;">Actions</th>
+                    <th style="padding: 8px;">Last Changed By</th>  <!-- New column for Last Changed By -->
                 </tr>
             </thead>
             <tbody id="tags-list">
@@ -37,6 +38,7 @@
                         <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
                         <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
                     </td>
+                    <td style="padding: 8px;">{{ tag.last_changed_by if tag.last_changed_by else 'N/A' }}</td> <!-- Display last changed by -->
                 </tr>
                 {% endfor %}
             </tbody>
