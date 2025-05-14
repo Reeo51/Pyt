@@ -5,17 +5,21 @@
 
     <div class="box">
         <h2>Dashboard</h2>
+        
+        <!-- Search Form -->
         <form method="GET" action="{{ url_for('dashboard') }}" style="margin-bottom: 20px;">
             <input type="text" name="search" placeholder="Search RFID or Label" value="{{ request.args.get('search') }}" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
             <input type="submit" value="Search" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
         </form>
 
+        <!-- RFID and Label Input Form -->
         <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
             <input type="text" name="rfid" placeholder="RFID" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
             <input type="text" name="label" placeholder="Label" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
             <input type="submit" value="Add RFID" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
         </form>
 
+        <!-- Table of Tags -->
         <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
             <thead>
                 <tr style="background-color: #f4f4f4; text-align: left;">
@@ -44,9 +48,11 @@
             </tbody>
         </table>
 
-        <!-- Logout Button -->
+        <!-- Buttons for Mode Select and Logout -->
         <div style="margin-top: 20px; text-align: right;">
+            <a href="{{ url_for('mode_selection') }}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Mode Select</a>
             <a href="{{ url_for('logout') }}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
         </div>
     </div>
+
 {% endblock %}

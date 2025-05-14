@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="box">
+    <h2>Edit Inventory Item</h2>
+    
+    <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+        <input type="text" name="rfid" value="{{ tag.rfid }}" placeholder="RFID" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="text" name="label" value="{{ tag.label }}" placeholder="Label" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="submit" value="Save Changes" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+    </form>
+
+    <div style="margin-top: 20px; text-align: right;">
+        <a href="{{ url_for('inventory_check') }}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Back to Inventory</a>
+    </div>
+</div>
+{% endblock %}

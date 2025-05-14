@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import UserMixin, LoginManager, login_user, login_required, current_user, logout_user
 from flask_migrate import Migrate
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import json
 import threading
@@ -37,6 +37,14 @@ class Tag(db.Model):
     time_seen = db.Column(db.String(120), nullable=False)
     last_changed_by = db.Column(db.String(120), nullable=True)
 
+class InventoryTag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rfid = db.Column(db.String(120), unique=True, nullable=False)
+    label = db.Column(db.String(120), nullable=False)
+    last_seen = db.Column(db.String(120), nullable=False)
+    time_seen = db.Column(db.String(120), nullable=False)
+    last_changed_by = db.Column(db.String(120), nullable=True)
+
 # User loader
 @login_manager.user_loader
 def load_user(user_id):
@@ -45,8 +53,8 @@ def load_user(user_id):
 # Autosave background task function
 def autosave():
     while True:
-        time.sleep(5)  
-        db.session.commit()  
+        time.sleep(5)
+        db.session.commit()
         print("Database autosaved.")
 
 # Start autosave thread
@@ -54,6 +62,28 @@ def start_autosave():
     autosave_thread = threading.Thread(target=autosave)
     autosave_thread.daemon = True
     autosave_thread.start()
+
+# Check inventory for missing items
+def check_inventory():
+    missing_items = []
+    eight_hours_ago = datetime.now() - timedelta(hours=8)
+
+    # Cross-check the tracking and inventory database
+    inventory_tags = InventoryTag.query.all()
+    tracking_tags = Tag.query.all()
+
+    # Compare and find missing tags
+    for tag in inventory_tags:
+        if tag.rfid not in [t.rfid for t in tracking_tags]:
+            missing_items.append(f"Missing from tracking: {tag.rfid} - {tag.label}")
+        elif datetime.strptime(tag.time_seen, "%H:%M:%S") < eight_hours_ago:
+            missing_items.append(f"Not scanned in the last 8 hours: {tag.rfid} - {tag.label}")
+
+    if missing_items:
+        for item in missing_items:
+            flash(item, 'danger')  # Only show flash messages on the inventory check page
+    else:
+        flash("Inventory complete. No missing items.", 'success')
 
 # Routes
 @app.route('/')
@@ -69,9 +99,9 @@ def login():
 
         if user and bcrypt.check_password_hash(user.password, password):
             login_user(user)
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('mode_selection'))  # Redirect to mode selection after successful login
         else:
-            flash('Incorrect username or password. Please try again.', 'danger')  # Error message for failed login
+            flash('Incorrect username or password. Please try again.', 'danger')
 
     return render_template('login.html')
 
@@ -106,31 +136,6 @@ def dashboard():
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        # Check if the username already exists
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            flash('Username already exists! Please choose a different username.', 'danger')
-            return redirect(url_for('register'))
-
-        try:
-            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-            new_user = User(username=username, password=hashed_password)
-            db.session.add(new_user)
-            db.session.commit()
-            flash('Your account has been created!', 'success')
-            return redirect(url_for('login'))
-        except Exception as e:
-            flash(f'An error occurred: {str(e)}', 'danger')
-            return redirect(url_for('register'))
-
-    return render_template('register.html')
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -194,6 +199,66 @@ def scan_rfid():
     db.session.commit()
 
     return "RFID Tag processed successfully", 200
+
+@app.route('/mode_selection')
+@login_required
+def mode_selection():
+    return render_template('mode_selection.html')  # Show mode selection page
+
+@app.route('/inventory_check', methods=['GET', 'POST'])
+@login_required
+def inventory_check():
+    search_query = request.args.get('search')  
+
+    if search_query:
+        inventory_tags = InventoryTag.query.filter(
+            (InventoryTag.rfid.like(f"%{search_query}%")) | 
+            (InventoryTag.label.like(f"%{search_query}%"))
+        ).all()  
+    else:
+        inventory_tags = InventoryTag.query.all()  
+
+    if request.method == 'POST':
+        rfid = request.form['rfid']
+        label = request.form['label']
+        time_now = datetime.now().strftime("%H:%M:%S")  
+
+        new_inventory_tag = InventoryTag(rfid=rfid, label=label, last_seen="Not yet scanned", time_seen=time_now)
+        db.session.add(new_inventory_tag)
+        db.session.commit()
+        flash('Inventory RFID Tag added successfully!', 'success')
+        return redirect(url_for('inventory_check'))
+
+    check_inventory()  # Check inventory for missing items
+    return render_template('inventory_check.html', inventory_tags=inventory_tags)
+
+
+@app.route('/edit_inventory/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_inventory(id):
+    tag = InventoryTag.query.get_or_404(id)
+
+    if request.method == 'POST':
+        tag.rfid = request.form['rfid']  # Update RFID
+        tag.label = request.form['label']  # Update Label
+        tag.last_changed_by = current_user.username
+        tag.time_seen = datetime.now().strftime("%H:%M:%S")  # Update timestamp on change
+        
+        db.session.commit()
+        flash('Inventory RFID Tag updated successfully!', 'success')
+        return redirect(url_for('inventory_check'))
+
+    return render_template('inventory_setup.html', tag=tag)
+
+
+@app.route('/delete_inventory/<int:id>', methods=['GET', 'POST'])
+@login_required
+def delete_inventory(id):
+    tag = InventoryTag.query.get_or_404(id)
+    db.session.delete(tag)
+    db.session.commit()
+    flash('Inventory RFID Tag deleted successfully!', 'success')
+    return redirect(url_for('inventory_check'))
 
 def run_rfid_scanner():
     COM_PORT = 'COM4'  
