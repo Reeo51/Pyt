@@ -105,6 +105,25 @@ def login():
 
     return render_template('login.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+        user = User.query.filter_by(username=username).first()
+        
+        if user:
+            flash('Username already exists. Please choose a different username.', 'danger')
+        else:
+            new_user = User(username=username, password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
+
+    return render_template('register.html')
+
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
@@ -232,7 +251,6 @@ def inventory_check():
     check_inventory()  # Check inventory for missing items
     return render_template('inventory_check.html', inventory_tags=inventory_tags)
 
-
 @app.route('/edit_inventory/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_inventory(id):
@@ -249,7 +267,6 @@ def edit_inventory(id):
         return redirect(url_for('inventory_check'))
 
     return render_template('inventory_setup.html', tag=tag)
-
 
 @app.route('/delete_inventory/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -291,7 +308,7 @@ def run_rfid_scanner():
                         print(f"Failed to process RFID Tag: {response.status_code}")
 
     except KeyboardInterrupt:
-        print("\nStopping...")
+        print("\nStopping...") 
     finally:
         ser.close()
 
