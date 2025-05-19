@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, Response
+from flask import Flask, render_template, redirect, url_for, request, flash, Response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import UserMixin, LoginManager, login_user, login_required, current_user, logout_user
@@ -19,6 +19,9 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# Global variables
+inventory_mode_active = False
 
 # Set up Flask-Migrate
 migrate = Migrate(app, db)
@@ -66,24 +69,86 @@ def start_autosave():
 # Check inventory for missing items
 def check_inventory():
     missing_items = []
-    eight_hours_ago = datetime.now() - timedelta(hours=8)
+    time_missing_items = []
+    current_time = datetime.now()
+    eight_hours_ago = current_time - timedelta(hours=8)
 
     # Cross-check the tracking and inventory database
     inventory_tags = InventoryTag.query.all()
     tracking_tags = Tag.query.all()
+    
+    # Get lists of RFIDs from both systems
+    inventory_rfids = [tag.rfid for tag in inventory_tags]
+    tracking_rfids = [tag.rfid for tag in tracking_tags]
 
-    # Compare and find missing tags
+    # Find tracking items missing from inventory
+    for tag in tracking_tags:
+        if tag.rfid not in inventory_rfids:
+            missing_items.append(f"Missing from inventory: {tag.rfid} - {tag.label}")
+        
+        # Check if item hasn't been scanned in 8+ hours
+        try:
+            last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
+            # Set date to today for comparison
+            last_seen_time = last_seen_time.replace(
+                year=current_time.year,
+                month=current_time.month,
+                day=current_time.day
+            )
+            
+            # If time is in future, it was from yesterday (or earlier)
+            if last_seen_time > current_time:
+                last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
+            
+            time_diff = current_time - last_seen_time
+            hours_diff = time_diff.total_seconds() / 3600  # Convert to hours
+            
+            if hours_diff >= 8:
+                time_missing_items.append(f"Not scanned in {int(hours_diff)} hours: {tag.rfid} - {tag.label}")
+        except ValueError:
+            # Skip items with invalid time format
+            pass
+
+    # Find inventory items missing from tracking (should be rare)
     for tag in inventory_tags:
-        if tag.rfid not in [t.rfid for t in tracking_tags]:
-            missing_items.append(f"Missing from tracking: {tag.rfid} - {tag.label}")
-        elif datetime.strptime(tag.time_seen, "%H:%M:%S") < eight_hours_ago:
-            missing_items.append(f"Not scanned in the last 8 hours: {tag.rfid} - {tag.label}")
+        if tag.rfid not in tracking_rfids:
+            missing_items.append(f"In inventory but not tracked: {tag.rfid} - {tag.label}")
 
+    # Show flash messages for physically missing items
     if missing_items:
         for item in missing_items:
-            flash(item, 'danger')  # Only show flash messages on the inventory check page
-    else:
-        flash("Inventory complete. No missing items.", 'success')
+            flash(item, 'danger')  # Show flash messages for missing items
+    
+    # Show flash messages for time-based missing items
+    if time_missing_items:
+        for item in time_missing_items:
+            flash(item, 'warning')  # Show flash messages for time-based missing items
+    
+    # Return missing and time_missing items for use in the template
+    return {
+        'missing_rfids': [tag.rfid for tag in tracking_tags if tag.rfid not in inventory_rfids],
+        'time_missing_rfids': [tag.rfid for tag in tracking_tags if is_time_missing(tag, eight_hours_ago)]
+    }
+
+# Helper function to check if an item is time-missing (not scanned in 8+ hours)
+def is_time_missing(tag, eight_hours_ago):
+    try:
+        current_time = datetime.now()
+        last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
+        # Set date to today for comparison
+        last_seen_time = last_seen_time.replace(
+            year=current_time.year, 
+            month=current_time.month,
+            day=current_time.day
+        )
+        
+        # If time is in future, it was from yesterday (or earlier)
+        if last_seen_time > current_time:
+            last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
+        
+        return last_seen_time < eight_hours_ago
+    except ValueError:
+        return False  # In case of invalid time format
 
 # Routes
 @app.route('/')
@@ -222,34 +287,120 @@ def scan_rfid():
 @app.route('/mode_selection')
 @login_required
 def mode_selection():
-    return render_template('mode_selection.html')  # Show mode selection page
+    return render_template('mode_selection.html')
 
-@app.route('/inventory_check', methods=['GET', 'POST'])
+@app.route('/inventory_check', methods=['GET'])
 @login_required
 def inventory_check():
-    search_query = request.args.get('search')  
+    # Get all inventory tags to extract RFIDs for comparison
+    inventory_tags = InventoryTag.query.all()
+    inventory_rfids = [tag.rfid for tag in inventory_tags]
+    
+    # Get all tracking tags without filtering
+    tracking_tags = Tag.query.all()  
 
-    if search_query:
-        inventory_tags = InventoryTag.query.filter(
-            (InventoryTag.rfid.like(f"%{search_query}%")) | 
-            (InventoryTag.label.like(f"%{search_query}%"))
-        ).all()  
-    else:
-        inventory_tags = InventoryTag.query.all()  
+    # Check inventory for missing items and get missing status
+    missing_status = check_inventory()
+    
+    return render_template('inventory_check.html', 
+                          tracking_tags=tracking_tags,
+                          inventory_rfids=inventory_rfids,
+                          missing_rfids=missing_status['missing_rfids'],
+                          time_missing_rfids=missing_status['time_missing_rfids'])
 
-    if request.method == 'POST':
-        rfid = request.form['rfid']
-        label = request.form['label']
-        time_now = datetime.now().strftime("%H:%M:%S")  
+@app.route('/start_inventory', methods=['POST'])
+@login_required
+def start_inventory():
+    # Get search parameters from the request
+    data = request.json
+    search_term = data.get('search_term', '')
+    
+    # Prepare messages list for JSON response
+    messages = []
+    
+    if search_term:
+        # Search for tags matching either RFID or label
+        tracking_tags = Tag.query.filter(
+            (Tag.rfid.like(f"%{search_term}%")) | 
+            (Tag.label.like(f"%{search_term}%"))
+        ).all()
+        
+        if tracking_tags:
+            # Calculate time since last scan for each tag
+            current_time = datetime.now()
+            for tag in tracking_tags:
+                # Parse the time_seen string to get a datetime object
+                try:
+                    last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
+                    # Set the date to today for comparison
+                    last_seen_time = last_seen_time.replace(
+                        year=current_time.year, 
+                        month=current_time.month, 
+                        day=current_time.day
+                    )
+                    
+                    # If the time is in the future, it means the scan was from yesterday
+                    if last_seen_time > current_time:
+                        last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
+                        
+                    # Calculate time difference
+                    time_diff = current_time - last_seen_time
+                    hours, remainder = divmod(time_diff.seconds, 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    
+                    time_diff_str = f"{hours} hours, {minutes} minutes since last scan"
+                    
+                    # Create message with all required information
+                    message_text = f"Found: RFID: {tag.rfid}, Label: {tag.label}, Location: {tag.last_seen}, {time_diff_str}"
+                    messages.append({
+                        'category': 'success',
+                        'message': message_text
+                    })
+                    
+                    # Also create a flash message for compatibility
+                    flash(message_text, "success")
+                
+                except ValueError:
+                    # Handle case where time_seen is not in the expected format
+                    message_text = f"Found: RFID: {tag.rfid}, Label: {tag.label}, Location: {tag.last_seen}, Time: {tag.time_seen}"
+                    messages.append({
+                        'category': 'success',
+                        'message': message_text
+                    })
+                    
+                    # Also create a flash message for compatibility
+                    flash(message_text, "success")
+        else:
+            message_text = f"No items found matching '{search_term}'"
+            messages.append({
+                'category': 'warning',
+                'message': message_text
+            })
+            
+            # Also create a flash message for compatibility
+            flash(message_text, "warning")
+    
+    # Set inventory mode active
+    global inventory_mode_active
+    inventory_mode_active = True
+    
+    return jsonify({
+        'status': 'success', 
+        'message': 'Inventory search complete',
+        'messages': messages
+    })
 
-        new_inventory_tag = InventoryTag(rfid=rfid, label=label, last_seen="Not yet scanned", time_seen=time_now)
-        db.session.add(new_inventory_tag)
-        db.session.commit()
-        flash('Inventory RFID Tag added successfully!', 'success')
-        return redirect(url_for('inventory_check'))
-
-    check_inventory()  # Check inventory for missing items
-    return render_template('inventory_check.html', inventory_tags=inventory_tags)
+@app.route('/finish_inventory', methods=['POST'])
+@login_required
+def finish_inventory():
+    # This route handles the completion of inventory mode
+    global inventory_mode_active
+    inventory_mode_active = False
+    
+    # Run the inventory check to update missing items
+    check_inventory()
+    
+    return jsonify({'status': 'success', 'message': 'Inventory completed'})
 
 @app.route('/edit_inventory/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -275,6 +426,43 @@ def delete_inventory(id):
     db.session.delete(tag)
     db.session.commit()
     flash('Inventory RFID Tag deleted successfully!', 'success')
+    return redirect(url_for('inventory_check'))
+
+@app.route('/sync_inventory')
+@login_required
+def sync_inventory():
+    # Get all tracking tags
+    tracking_tags = Tag.query.all()
+    
+    # Get all inventory tags to get existing RFIDs
+    inventory_tags = InventoryTag.query.all()
+    inventory_rfids = [tag.rfid for tag in inventory_tags]
+    
+    # Count of newly added items
+    added_count = 0
+    
+    # Add tracking tags to inventory if not already there
+    for tag in tracking_tags:
+        if tag.rfid not in inventory_rfids:
+            # Create new inventory entry based on tracking tag
+            new_inventory_tag = InventoryTag(
+                rfid=tag.rfid,
+                label=tag.label,
+                last_seen=tag.last_seen,
+                time_seen=tag.time_seen,
+                last_changed_by=current_user.username
+            )
+            db.session.add(new_inventory_tag)
+            added_count += 1
+    
+    # Commit changes to database
+    db.session.commit()
+    
+    if added_count > 0:
+        flash(f"Successfully synchronized inventory. Added {added_count} new items.", "success")
+    else:
+        flash("Inventory is already synchronized with tracking system.", "info")
+    
     return redirect(url_for('inventory_check'))
 
 def run_rfid_scanner():

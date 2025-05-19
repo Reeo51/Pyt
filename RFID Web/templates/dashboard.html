@@ -3,7 +3,7 @@
 {% block content %}
     <meta http-equiv="refresh" content="5">  <!-- Page auto-refresh every 5 seconds -->
 
-    <div class="box">
+    <div class="box" style="max-width: 1000px; margin: 50px auto;">
         <h2>Dashboard</h2>
         
         <!-- Search Form -->
@@ -20,21 +20,21 @@
         </form>
 
         <!-- Table of Tags -->
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed;">
             <thead>
                 <tr style="background-color: #f4f4f4; text-align: left;">
-                    <th style="padding: 8px;">RFID</th>
-                    <th style="padding: 8px;">Label</th>
-                    <th style="padding: 8px;">Last Seen</th>
-                    <th style="padding: 8px;">Time Seen</th>
-                    <th style="padding: 8px;">Actions</th>
-                    <th style="padding: 8px;">Last Changed By</th>  <!-- New column for Last Changed By -->
+                    <th style="padding: 8px; background-color: #007bff; color: white; width: 22%;">RFID</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white; width: 15%;">Label</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white; width: 15%;">Last Seen</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white; width: 12%;">Time Seen</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white; width: 18%;">Actions</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white; width: 18%;">Last Changed By</th>
                 </tr>
             </thead>
             <tbody id="tags-list">
                 {% for tag in tags %}
                 <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
-                    <td style="padding: 8px;">{{ tag.rfid }}</td>
+                    <td style="padding: 8px;" class="rfid-code">{{ tag.rfid[:18] }}<br>{{ tag.rfid[18:] }}</td>
                     <td style="padding: 8px;">{{ tag.label }}</td>
                     <td style="padding: 8px;">{{ tag.last_seen }}</td>
                     <td style="padding: 8px;">{{ tag.time_seen }}</td>

@@ -5,13 +5,14 @@
     <title>{% block title %}RFID Web App{% endblock %}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: monospace, 'Courier New', Courier, fixed-width;
             background-color: #f0f2f5;
             margin: 0;
             padding: 0;
         }
         .box {
-            width: 800px;
+            width: 95%;
+            max-width: 1000px;
             margin: 50px auto;
             padding: 20px;
             background-color: white;
@@ -26,6 +27,7 @@
             padding: 10px;
             text-align: left;
             border: 1px solid #ddd;
+            font-family: monospace, 'Courier New', Courier, fixed-width;
         }
         th {
             background-color: #007bff;
@@ -44,6 +46,14 @@
         input, button {
             padding: 8px;
             margin: 5px 0;
+            font-family: monospace, 'Courier New', Courier, fixed-width;
+        }
+        .rfid-code {
+            font-family: monospace, 'Courier New', Courier, fixed-width;
+            word-break: break-all;
+            font-size: 0.95em;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
         }
     </style>
 </head>
