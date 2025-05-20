@@ -3,7 +3,7 @@
 {% block content %}
     <meta http-equiv="refresh" content="5">  <!-- Page auto-refresh every 5 seconds -->
 
-    <div class="box" style="max-width: 1000px; margin: 50px auto;">
+    <div class="box">
         <h2>Dashboard</h2>
         
         <!-- Search Form -->
@@ -20,38 +20,48 @@
         </form>
 
         <!-- Table of Tags -->
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed;">
-            <thead>
-                <tr style="background-color: #f4f4f4; text-align: left;">
-                    <th style="padding: 8px; background-color: #007bff; color: white; width: 22%;">RFID</th>
-                    <th style="padding: 8px; background-color: #007bff; color: white; width: 15%;">Label</th>
-                    <th style="padding: 8px; background-color: #007bff; color: white; width: 15%;">Last Seen</th>
-                    <th style="padding: 8px; background-color: #007bff; color: white; width: 12%;">Time Seen</th>
-                    <th style="padding: 8px; background-color: #007bff; color: white; width: 18%;">Actions</th>
-                    <th style="padding: 8px; background-color: #007bff; color: white; width: 18%;">Last Changed By</th>
-                </tr>
-            </thead>
-            <tbody id="tags-list">
-                {% for tag in tags %}
-                <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
-                    <td style="padding: 8px;" class="rfid-code">{{ tag.rfid[:18] }}<br>{{ tag.rfid[18:] }}</td>
-                    <td style="padding: 8px;">{{ tag.label }}</td>
-                    <td style="padding: 8px;">{{ tag.last_seen }}</td>
-                    <td style="padding: 8px;">{{ tag.time_seen }}</td>
-                    <td style="padding: 8px;">
-                        <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
-                        <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
-                    </td>
-                    <td style="padding: 8px;">{{ tag.last_changed_by if tag.last_changed_by else 'N/A' }}</td> <!-- Display last changed by -->
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div style="overflow-x: auto;">
+            <table style="border-collapse: collapse; margin-top: 20px;">
+                <thead>
+                    <tr style="background-color: #f4f4f4; text-align: left;">
+                        <th style="padding: 8px; background-color: #007bff; color: white;">RFID</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white;">Label</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white;">Last Seen</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white;">Time</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; display: none;">Date</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white;">Actions</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white;">Changed By</th>
+                    </tr>
+                </thead>
+                <tbody id="tags-list">
+                    {% for tag in tags %}
+                    <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
+                        <td style="padding: 8px;" class="rfid-code">
+                            {% if tag.rfid|length > 6 %}
+                                {{ tag.rfid[:-6] }}<br>{{ tag.rfid[-6:] }}
+                            {% else %}
+                                {{ tag.rfid }}
+                            {% endif %}
+                        </td>
+                        <td style="padding: 8px;">{{ tag.label }}</td>
+                        <td style="padding: 8px;">{{ tag.last_seen }}</td>
+                        <td style="padding: 8px;">{{ tag.time_seen }}</td>
+                        <td style="padding: 8px; display: none;">{{ tag.date_seen if tag.date_seen else 'N/A' }}</td>
+                        <td style="padding: 8px;">
+                            <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
+                            <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
+                        </td>
+                        <td style="padding: 8px;">{{ tag.last_changed_by if tag.last_changed_by else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
         <!-- Buttons for Mode Select and Logout -->
-        <div style="margin-top: 20px; text-align: right;">
-            <a href="{{ url_for('mode_selection') }}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Mode Select</a>
-            <a href="{{ url_for('logout') }}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
+        <div class="button-group" style="margin-top: 20px; text-align: right;">
+            <a href="{{ url_for('mode_selection') }}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Mode Select</a>
+            <a href="{{ url_for('logout') }}" style="display: inline-block; padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
         </div>
     </div>
 

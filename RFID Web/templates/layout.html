@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}RFID Web App{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Computer Engineering Thesis{% endblock %}</title>
     <style>
         body {
             font-family: monospace, 'Courier New', Courier, fixed-width;
@@ -13,8 +14,8 @@
         .box {
             width: 95%;
             max-width: 1000px;
-            margin: 50px auto;
-            padding: 20px;
+            margin: 20px auto;
+            padding: 15px;
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -24,7 +25,7 @@
             border-collapse: collapse;
         }
         th, td {
-            padding: 10px;
+            padding: 8px;
             text-align: left;
             border: 1px solid #ddd;
             font-family: monospace, 'Courier New', Courier, fixed-width;
@@ -54,6 +55,42 @@
             font-size: 0.95em;
             letter-spacing: 0.5px;
             line-height: 1.5;
+        }
+        
+        /* Mobile responsive styles */
+        @media screen and (max-width: 768px) {
+            .box {
+                width: 90%;
+                padding: 10px;
+                margin: 10px auto;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            th, td {
+                padding: 6px;
+                font-size: 0.9em;
+            }
+            
+            input, button {
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            /* Responsive buttons */
+            .button-group {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .button-group a {
+                text-align: center;
+                margin: 5px 0;
+            }
         }
     </style>
 </head>

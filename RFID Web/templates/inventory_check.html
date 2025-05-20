@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
-    <div class="box" style="padding: 20px; overflow: hidden; max-width: 1000px; margin: 50px auto;">
+    <div class="box">
         <h2>Inventory Check</h2>
 
         <!-- Flash Messages -->
@@ -30,7 +30,7 @@
         <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; background-color: #f9f9f9; width: 100%; box-sizing: border-box;">
             <h3 style="margin-top: 0; margin-bottom: 10px;">Inventory Tools</h3>
             
-            <div style="display: flex; flex-wrap: wrap; margin-bottom: 15px; gap: 10px; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;">
+            <div class="button-group" style="display: flex; flex-wrap: wrap; margin-bottom: 15px; gap: 10px; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;">
                 <a href="{{ url_for('sync_inventory') }}" style="padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; text-align: center; margin-bottom: 5px;">Sync Inventory with Tracking</a>
                 <button id="clear-all-messages" style="padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 5px;">Clear All Messages</button>
             </div>
@@ -38,7 +38,7 @@
             <div style="border-top: 1px solid #ddd; padding-top: 15px; width: 100%; box-sizing: border-box;">
                 <h4 style="margin-top: 0; margin-bottom: 10px;">Inventory Search</h4>
                 <input type="text" id="search-term" placeholder="Enter RFID or Label" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; width: 100%; box-sizing: border-box;">
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; width: 100%; box-sizing: border-box;">
+                <div class="button-group" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; width: 100%; box-sizing: border-box;">
                     <button id="start-inventory" style="padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 5px;">Start Inventory Search</button>
                     <button id="finish-inventory" style="padding: 10px 20px; background-color: #FF5722; color: white; border: none; border-radius: 5px; cursor: pointer; display: none; margin-bottom: 5px;">Finish Inventory</button>
                 </div>
@@ -55,28 +55,38 @@
 
         <!-- Table of Tags - Using the tracking system data -->
         <div style="width: 100%; overflow-x: auto; box-sizing: border-box;">
-            <table style="width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; border: 1px solid #dee2e6;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #dee2e6;">
                 <thead>
                     <tr>
-                        <th style="padding: 10px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6; width: 22%;">RFID</th>
-                        <th style="padding: 10px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6; width: 15%;">Label</th>
-                        <th style="padding: 10px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6; width: 15%;">Last Seen</th>
-                        <th style="padding: 10px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6; width: 12%;">Time Seen</th>
-                        <th style="padding: 10px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6; width: 15%;">Status</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6;">RFID</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6;">Label</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6;">Last Seen</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6;">Time</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6; display: none;">Date</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6;">Status</th>
                     </tr>
                 </thead>
                 <tbody id="inventory-list">
                     {% for tag in tracking_tags %}
                         <tr style="{% if loop.index is divisibleby 2 %}background-color: #f2f2f2;{% else %}background-color: white;{% endif %} border: 1px solid #dee2e6;">
-                            <td style="padding: 8px; border: 1px solid #dee2e6;" class="rfid-code">{{ tag.rfid[:18] }}<br>{{ tag.rfid[18:] }}</td>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;" class="rfid-code">
+                                {% if tag.rfid|length > 6 %}
+                                    {{ tag.rfid[:-6] }}<br>{{ tag.rfid[-6:] }}
+                                {% else %}
+                                    {{ tag.rfid }}
+                                {% endif %}
+                            </td>
                             <td style="padding: 8px; border: 1px solid #dee2e6;">{{ tag.label }}</td>
                             <td style="padding: 8px; border: 1px solid #dee2e6;">{{ tag.last_seen }}</td>
                             <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">{{ tag.time_seen }}</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; display: none;">{{ tag.date_seen if tag.date_seen else 'N/A' }}</td>
                             <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">
                                 {% if tag.rfid in missing_rfids %}
                                     <span style="color: #dc3545; font-weight: bold;">Missing</span>
                                 {% elif tag.rfid in time_missing_rfids %}
-                                    <span style="color: #fd7e14; font-weight: bold;">Not Scanned<br>(8h+)</span>
+                                    <span style="color: #dc3545; font-weight: bold;">Not Scanned (24h+)</span>
+                                {% elif tag.rfid in time_warning_rfids %}
+                                    <span style="color: #fd7e14; font-weight: bold;">Not Scanned (8h+)</span>
                                 {% elif tag.rfid in inventory_rfids %}
                                     <span style="color: #28a745;">In Inventory</span>
                                 {% else %}
@@ -90,9 +100,9 @@
         </div>
 
         <!-- Logout and Mode Select Button -->
-        <div style="margin-top: 20px; text-align: right;">
-            <a href="{{ url_for('mode_selection') }}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Mode Select</a>
-            <a href="{{ url_for('logout') }}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
+        <div class="button-group" style="margin-top: 20px; text-align: right;">
+            <a href="{{ url_for('mode_selection') }}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Mode Select</a>
+            <a href="{{ url_for('logout') }}" style="display: inline-block; padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
         </div>
     </div>
 

@@ -38,6 +38,7 @@ class Tag(db.Model):
     label = db.Column(db.String(120), nullable=False)
     last_seen = db.Column(db.String(120), nullable=False)
     time_seen = db.Column(db.String(120), nullable=False)
+    date_seen = db.Column(db.String(120), nullable=True)
     last_changed_by = db.Column(db.String(120), nullable=True)
 
 class InventoryTag(db.Model):
@@ -46,6 +47,7 @@ class InventoryTag(db.Model):
     label = db.Column(db.String(120), nullable=False)
     last_seen = db.Column(db.String(120), nullable=False)
     time_seen = db.Column(db.String(120), nullable=False)
+    date_seen = db.Column(db.String(120), nullable=True)
     last_changed_by = db.Column(db.String(120), nullable=True)
 
 # User loader
@@ -70,8 +72,10 @@ def start_autosave():
 def check_inventory():
     missing_items = []
     time_missing_items = []
+    time_warning_items = []
     current_time = datetime.now()
     eight_hours_ago = current_time - timedelta(hours=8)
+    twenty_four_hours_ago = current_time - timedelta(hours=24)
 
     # Cross-check the tracking and inventory database
     inventory_tags = InventoryTag.query.all()
@@ -88,23 +92,35 @@ def check_inventory():
         
         # Check if item hasn't been scanned in 8+ hours
         try:
-            last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
-            # Set date to today for comparison
-            last_seen_time = last_seen_time.replace(
-                year=current_time.year,
-                month=current_time.month,
-                day=current_time.day
-            )
-            
-            # If time is in future, it was from yesterday (or earlier)
-            if last_seen_time > current_time:
-                last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
-            
-            time_diff = current_time - last_seen_time
-            hours_diff = time_diff.total_seconds() / 3600  # Convert to hours
-            
-            if hours_diff >= 8:
-                time_missing_items.append(f"Not scanned in {int(hours_diff)} hours: {tag.rfid} - {tag.label}")
+            # If date_seen is available, use it for accurate comparison
+            if tag.date_seen:
+                last_seen_datetime = datetime.strptime(f"{tag.date_seen} {tag.time_seen}", "%Y-%m-%d %H:%M:%S")
+                time_diff = current_time - last_seen_datetime
+                hours_diff = time_diff.total_seconds() / 3600  # Convert to hours
+                
+                if hours_diff >= 24:  # Missing if not scanned for 24+ hours
+                    time_missing_items.append(f"Not scanned in {int(hours_diff)} hours: {tag.rfid} - {tag.label} (Last seen: {tag.date_seen} {tag.time_seen})")
+                elif hours_diff >= 8:  # Warning if not scanned for 8+ hours
+                    time_warning_items.append(f"Not scanned in {int(hours_diff)} hours: {tag.rfid} - {tag.label} (Last seen: {tag.date_seen} {tag.time_seen})")
+            else:
+                # Fall back to the old method if date_seen is not available
+                last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
+                # Set date to today for comparison
+                last_seen_time = last_seen_time.replace(
+                    year=current_time.year,
+                    month=current_time.month,
+                    day=current_time.day
+                )
+                
+                # If time is in future, it was from yesterday (or earlier)
+                if last_seen_time > current_time:
+                    last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
+                
+                time_diff = current_time - last_seen_time
+                hours_diff = time_diff.total_seconds() / 3600  # Convert to hours
+                
+                if hours_diff >= 8:
+                    time_warning_items.append(f"Not scanned in {int(hours_diff)} hours: {tag.rfid} - {tag.label} (Last seen time: {tag.time_seen})")
         except ValueError:
             # Skip items with invalid time format
             pass
@@ -122,18 +138,31 @@ def check_inventory():
     # Show flash messages for time-based missing items
     if time_missing_items:
         for item in time_missing_items:
-            flash(item, 'warning')  # Show flash messages for time-based missing items
+            flash(item, 'danger')  # Critical - missing for 24+ hours
+    
+    # Show flash messages for time-based warning items
+    if time_warning_items:
+        for item in time_warning_items:
+            flash(item, 'warning')  # Warning - not scanned in 8+ hours
     
     # Return missing and time_missing items for use in the template
     return {
         'missing_rfids': [tag.rfid for tag in tracking_tags if tag.rfid not in inventory_rfids],
-        'time_missing_rfids': [tag.rfid for tag in tracking_tags if is_time_missing(tag, eight_hours_ago)]
+        'time_warning_rfids': [tag.rfid for tag in tracking_tags if is_time_warning(tag, eight_hours_ago, twenty_four_hours_ago)],
+        'time_missing_rfids': [tag.rfid for tag in tracking_tags if is_time_missing(tag, twenty_four_hours_ago)]
     }
 
-# Helper function to check if an item is time-missing (not scanned in 8+ hours)
-def is_time_missing(tag, eight_hours_ago):
+# Helper function to check if an item is time-missing (not scanned in 24+ hours)
+def is_time_missing(tag, twenty_four_hours_ago):
     try:
         current_time = datetime.now()
+        
+        # If date_seen is available, use it for accurate comparison
+        if tag.date_seen:
+            last_seen_datetime = datetime.strptime(f"{tag.date_seen} {tag.time_seen}", "%Y-%m-%d %H:%M:%S")
+            return last_seen_datetime < twenty_four_hours_ago
+        
+        # Fall back to the old method if date_seen is not available
         last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
         # Set date to today for comparison
         last_seen_time = last_seen_time.replace(
@@ -146,7 +175,36 @@ def is_time_missing(tag, eight_hours_ago):
         if last_seen_time > current_time:
             last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
         
-        return last_seen_time < eight_hours_ago
+        # Check if it's more than 24 hours ago
+        return last_seen_time < twenty_four_hours_ago
+    except ValueError:
+        return False  # In case of invalid time format
+
+# Helper function to check if an item has not been scanned in 8+ hours but less than 24 hours
+def is_time_warning(tag, eight_hours_ago, twenty_four_hours_ago):
+    try:
+        current_time = datetime.now()
+        
+        # If date_seen is available, use it for accurate comparison
+        if tag.date_seen:
+            last_seen_datetime = datetime.strptime(f"{tag.date_seen} {tag.time_seen}", "%Y-%m-%d %H:%M:%S")
+            return eight_hours_ago > last_seen_datetime >= twenty_four_hours_ago
+        
+        # Fall back to the old method if date_seen is not available
+        last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
+        # Set date to today for comparison
+        last_seen_time = last_seen_time.replace(
+            year=current_time.year, 
+            month=current_time.month,
+            day=current_time.day
+        )
+        
+        # If time is in future, it was from yesterday (or earlier)
+        if last_seen_time > current_time:
+            last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
+        
+        # Check if it's between 8 and 24 hours ago
+        return eight_hours_ago > last_seen_time >= twenty_four_hours_ago
     except ValueError:
         return False  # In case of invalid time format
 
@@ -205,9 +263,10 @@ def dashboard():
     if request.method == 'POST':
         rfid = request.form['rfid']
         label = request.form['label']
-        time_now = datetime.now().strftime("%H:%M:%S")  
+        time_now = datetime.now().strftime("%H:%M:%S")
+        date_now = datetime.now().strftime("%Y-%m-%d")
 
-        new_tag = Tag(rfid=rfid, label=label, last_seen="Not yet scanned", time_seen=time_now)
+        new_tag = Tag(rfid=rfid, label=label, last_seen="Not yet scanned", time_seen=time_now, date_seen=date_now)
         db.session.add(new_tag)
         db.session.commit()
         flash('RFID Tag added successfully!', 'success')
@@ -230,6 +289,7 @@ def edit(id):
         tag.label = request.form['label']
         tag.last_seen = request.form['last_seen']
         tag.time_seen = datetime.now().strftime("%H:%M:%S")
+        tag.date_seen = datetime.now().strftime("%Y-%m-%d")
         tag.last_changed_by = current_user.username  
         
         db.session.commit()
@@ -271,13 +331,15 @@ def scan_rfid():
     rfid = request.form.get('rfid')
     location = "Communication Laboratory"  # Override location parameter
     time_now = datetime.now().strftime("%H:%M:%S")
+    date_now = datetime.now().strftime("%Y-%m-%d")
     
     tag = Tag.query.filter_by(rfid=rfid).first()
     if tag:
         tag.last_seen = location
         tag.time_seen = time_now
+        tag.date_seen = date_now
     else:
-        tag = Tag(rfid=rfid, label="New Tag", last_seen=location, time_seen=time_now)
+        tag = Tag(rfid=rfid, label="New Tag", last_seen=location, time_seen=time_now, date_seen=date_now)
         db.session.add(tag)
     
     db.session.commit()
@@ -306,6 +368,7 @@ def inventory_check():
                           tracking_tags=tracking_tags,
                           inventory_rfids=inventory_rfids,
                           missing_rfids=missing_status['missing_rfids'],
+                          time_warning_rfids=missing_status['time_warning_rfids'],
                           time_missing_rfids=missing_status['time_missing_rfids'])
 
 @app.route('/start_inventory', methods=['POST'])
@@ -331,27 +394,41 @@ def start_inventory():
             for tag in tracking_tags:
                 # Parse the time_seen string to get a datetime object
                 try:
-                    last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
-                    # Set the date to today for comparison
-                    last_seen_time = last_seen_time.replace(
-                        year=current_time.year, 
-                        month=current_time.month, 
-                        day=current_time.day
-                    )
-                    
-                    # If the time is in the future, it means the scan was from yesterday
-                    if last_seen_time > current_time:
-                        last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
+                    if tag.date_seen:
+                        # Use date_seen if available
+                        last_seen_datetime = datetime.strptime(f"{tag.date_seen} {tag.time_seen}", "%Y-%m-%d %H:%M:%S")
+                        time_diff = current_time - last_seen_datetime
+                        hours, remainder = divmod(time_diff.total_seconds(), 3600)
+                        minutes, seconds = divmod(remainder, 60)
                         
-                    # Calculate time difference
-                    time_diff = current_time - last_seen_time
-                    hours, remainder = divmod(time_diff.seconds, 3600)
-                    minutes, seconds = divmod(remainder, 60)
+                        time_diff_str = f"{int(hours)} hours, {minutes} minutes since last scan"
+                        
+                        # Create message with all required information including date
+                        message_text = f"Found: RFID: {tag.rfid}, Label: {tag.label}, Location: {tag.last_seen}, Last seen: {tag.date_seen} {tag.time_seen} ({time_diff_str})"
+                    else:
+                        # Fall back to time only if date not available
+                        last_seen_time = datetime.strptime(tag.time_seen, "%H:%M:%S")
+                        # Set date to today for comparison
+                        last_seen_time = last_seen_time.replace(
+                            year=current_time.year, 
+                            month=current_time.month, 
+                            day=current_time.day
+                        )
+                        
+                        # If the time is in the future, it means the scan was from yesterday
+                        if last_seen_time > current_time:
+                            last_seen_time = last_seen_time.replace(day=last_seen_time.day - 1)
+                            
+                        # Calculate time difference
+                        time_diff = current_time - last_seen_time
+                        hours, remainder = divmod(time_diff.seconds, 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        
+                        time_diff_str = f"{hours} hours, {minutes} minutes since last scan"
+                        
+                        # Create message with all required information
+                        message_text = f"Found: RFID: {tag.rfid}, Label: {tag.label}, Location: {tag.last_seen}, {time_diff_str}"
                     
-                    time_diff_str = f"{hours} hours, {minutes} minutes since last scan"
-                    
-                    # Create message with all required information
-                    message_text = f"Found: RFID: {tag.rfid}, Label: {tag.label}, Location: {tag.last_seen}, {time_diff_str}"
                     messages.append({
                         'category': 'success',
                         'message': message_text
@@ -362,7 +439,8 @@ def start_inventory():
                 
                 except ValueError:
                     # Handle case where time_seen is not in the expected format
-                    message_text = f"Found: RFID: {tag.rfid}, Label: {tag.label}, Location: {tag.last_seen}, Time: {tag.time_seen}"
+                    date_info = f", Date: {tag.date_seen}" if tag.date_seen else ""
+                    message_text = f"Found: RFID: {tag.rfid}, Label: {tag.label}, Location: {tag.last_seen}, Time: {tag.time_seen}{date_info}"
                     messages.append({
                         'category': 'success',
                         'message': message_text
@@ -412,6 +490,7 @@ def edit_inventory(id):
         tag.label = request.form['label']  # Update Label
         tag.last_changed_by = current_user.username
         tag.time_seen = datetime.now().strftime("%H:%M:%S")  # Update timestamp on change
+        tag.date_seen = datetime.now().strftime("%Y-%m-%d")  # Update date on change
         
         db.session.commit()
         flash('Inventory RFID Tag updated successfully!', 'success')
@@ -450,6 +529,7 @@ def sync_inventory():
                 label=tag.label,
                 last_seen=tag.last_seen,
                 time_seen=tag.time_seen,
+                date_seen=tag.date_seen,
                 last_changed_by=current_user.username
             )
             db.session.add(new_inventory_tag)
