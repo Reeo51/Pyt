@@ -57,7 +57,7 @@
             line-height: 1.5;
         }
         
-        /* Mobile responsive styles */
+        /* Mobile-specific styles */
         @media screen and (max-width: 768px) {
             .box {
                 width: 90%;
@@ -90,6 +90,13 @@
             .button-group a {
                 text-align: center;
                 margin: 5px 0;
+            }
+            
+            /* Fix RFID display on mobile only */
+            .rfid-code {
+                word-break: break-all;
+                display: block;
+                width: 120px; /* Limit width to force wrapping */
             }
         }
     </style>
