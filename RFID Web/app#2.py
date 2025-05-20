@@ -269,7 +269,7 @@ def events():
 @app.route('/scan', methods=['POST'])
 def scan_rfid():
     rfid = request.form.get('rfid')
-    location = "Communication Laboratory"  # Override location parameter
+    location = request.form.get('location', 'Unknown')  # Get location from the request
     time_now = datetime.now().strftime("%H:%M:%S")
     
     tag = Tag.query.filter_by(rfid=rfid).first()
@@ -465,16 +465,17 @@ def sync_inventory():
     
     return redirect(url_for('inventory_check'))
 
-def run_rfid_scanner():
-    COM_PORT = 'COM4'  
+def run_rfid_scanner_com3():
+    COM_PORT = 'COM3'  
     BAUD_RATE = 57600
     FLASK_URL = 'http://127.0.0.1:5000/scan'  
+    LOCATION = 'Instrumentation Laboratory'
 
     def extract_epcs(data):
         return re.findall(r'(E280[0-9A-F]{20})', data)
 
     ser = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=1)
-    print(f"Connected to RFID Reader on {COM_PORT}")
+    print(f"Connected to RFID Reader on {COM_PORT} for {LOCATION}")
     print("Waiting for tag EPCs...\n")
 
     try:
@@ -484,25 +485,68 @@ def run_rfid_scanner():
                 hex_data = binascii.hexlify(raw).decode('utf-8').upper()
                 epcs = extract_epcs(hex_data)
                 for epc in epcs:
-                    print(f"Detected Tag EPC: {epc}")
+                    print(f"Detected Tag EPC: {epc} in {LOCATION}")
                     data = {
                         'rfid': epc,
-                        'location': 'Communication Lab'  
+                        'location': LOCATION
                     }
                     response = requests.post(FLASK_URL, data=data)
                     if response.status_code == 200:
-                        print("RFID Tag processed successfully!")
+                        print(f"RFID Tag processed successfully from {LOCATION}!")
                     else:
-                        print(f"Failed to process RFID Tag: {response.status_code}")
+                        print(f"Failed to process RFID Tag from {LOCATION}: {response.status_code}")
 
     except KeyboardInterrupt:
-        print("\nStopping...") 
+        print(f"\nStopping {LOCATION} scanner...") 
+    finally:
+        ser.close()
+
+def run_rfid_scanner_com4():
+    COM_PORT = 'COM4'  
+    BAUD_RATE = 57600
+    FLASK_URL = 'http://127.0.0.1:5000/scan'  
+    LOCATION = 'Communication Laboratory'
+
+    def extract_epcs(data):
+        return re.findall(r'(E280[0-9A-F]{20})', data)
+
+    ser = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=1)
+    print(f"Connected to RFID Reader on {COM_PORT} for {LOCATION}")
+    print("Waiting for tag EPCs...\n")
+
+    try:
+        while True:
+            raw = ser.read(64)
+            if raw:
+                hex_data = binascii.hexlify(raw).decode('utf-8').upper()
+                epcs = extract_epcs(hex_data)
+                for epc in epcs:
+                    print(f"Detected Tag EPC: {epc} in {LOCATION}")
+                    data = {
+                        'rfid': epc,
+                        'location': LOCATION
+                    }
+                    response = requests.post(FLASK_URL, data=data)
+                    if response.status_code == 200:
+                        print(f"RFID Tag processed successfully from {LOCATION}!")
+                    else:
+                        print(f"Failed to process RFID Tag from {LOCATION}: {response.status_code}")
+
+    except KeyboardInterrupt:
+        print(f"\nStopping {LOCATION} scanner...") 
     finally:
         ser.close()
 
 if __name__ == '__main__':
     start_autosave()  
-    rfid_thread = threading.Thread(target=run_rfid_scanner)
-    rfid_thread.daemon = True
-    rfid_thread.start()
+    
+    # Start the two RFID scanners in separate threads
+    rfid_thread_com3 = threading.Thread(target=run_rfid_scanner_com3)
+    rfid_thread_com3.daemon = True
+    rfid_thread_com3.start()
+    
+    rfid_thread_com4 = threading.Thread(target=run_rfid_scanner_com4)
+    rfid_thread_com4.daemon = True
+    rfid_thread_com4.start()
+    
     app.run(debug=True, host='0.0.0.0', port=5000)
