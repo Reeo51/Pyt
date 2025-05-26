@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, Response, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, Response, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import UserMixin, LoginManager, login_user, login_required, current_user, logout_user
@@ -11,6 +11,10 @@ import serial
 import binascii
 import re
 import requests
+import os
+import csv
+import io
+import sqlite3
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecretkey'
@@ -40,6 +44,19 @@ class Tag(db.Model):
     time_seen = db.Column(db.String(120), nullable=False)
     date_seen = db.Column(db.String(120), nullable=True)
     last_changed_by = db.Column(db.String(120), nullable=True)
+    approved = db.Column(db.Boolean, default=False, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rfid': self.rfid,
+            'label': self.label,
+            'last_seen': self.last_seen,
+            'time_seen': self.time_seen,
+            'date_seen': self.date_seen,
+            'last_changed_by': self.last_changed_by,
+            'approved': self.approved
+        }
 
 class InventoryTag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,6 +66,7 @@ class InventoryTag(db.Model):
     time_seen = db.Column(db.String(120), nullable=False)
     date_seen = db.Column(db.String(120), nullable=True)
     last_changed_by = db.Column(db.String(120), nullable=True)
+    approved = db.Column(db.Boolean, default=False, nullable=False)
 
 # User loader
 @login_manager.user_loader
@@ -617,10 +635,300 @@ def run_rfid_scanner_com4():
     finally:
         ser.close()
 
+def run_rfid_scanner_com5():
+    COM_PORT = 'COM5'  
+    BAUD_RATE = 57600
+    FLASK_URL = 'http://127.0.0.1:5000/scan'  
+    LOCATION = 'Electronics Laboratory'
+
+    def extract_epcs(data):
+        return re.findall(r'(E280[0-9A-F]{20})', data)
+
+    ser = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=1)
+    print(f"Connected to RFID Reader on {COM_PORT} for {LOCATION}")
+    print("Waiting for tag EPCs...\n")
+
+    try:
+        while True:
+            raw = ser.read(64)
+            if raw:
+                hex_data = binascii.hexlify(raw).decode('utf-8').upper()
+                epcs = extract_epcs(hex_data)
+                for epc in epcs:
+                    print(f"Detected Tag EPC: {epc} in {LOCATION}")
+                    data = {
+                        'rfid': epc,
+                        'location': LOCATION
+                    }
+                    response = requests.post(FLASK_URL, data=data)
+                    if response.status_code == 200:
+                        print(f"RFID Tag processed successfully from {LOCATION}!")
+                    else:
+                        print(f"Failed to process RFID Tag from {LOCATION}: {response.status_code}")
+
+    except KeyboardInterrupt:
+        print(f"\nStopping {LOCATION} scanner...") 
+    finally:
+        ser.close()
+
+def run_rfid_scanner_com6():
+    COM_PORT = 'COM6'  
+    BAUD_RATE = 57600
+    FLASK_URL = 'http://127.0.0.1:5000/scan'  
+    LOCATION = 'Research Laboratory'
+
+    def extract_epcs(data):
+        return re.findall(r'(E280[0-9A-F]{20})', data)
+
+    ser = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=1)
+    print(f"Connected to RFID Reader on {COM_PORT} for {LOCATION}")
+    print("Waiting for tag EPCs...\n")
+
+    try:
+        while True:
+            raw = ser.read(64)
+            if raw:
+                hex_data = binascii.hexlify(raw).decode('utf-8').upper()
+                epcs = extract_epcs(hex_data)
+                for epc in epcs:
+                    print(f"Detected Tag EPC: {epc} in {LOCATION}")
+                    data = {
+                        'rfid': epc,
+                        'location': LOCATION
+                    }
+                    response = requests.post(FLASK_URL, data=data)
+                    if response.status_code == 200:
+                        print(f"RFID Tag processed successfully from {LOCATION}!")
+                    else:
+                        print(f"Failed to process RFID Tag from {LOCATION}: {response.status_code}")
+
+    except KeyboardInterrupt:
+        print(f"\nStopping {LOCATION} scanner...") 
+    finally:
+        ser.close()
+
+@app.route('/toggle_approval/<int:id>', methods=['POST'])
+@login_required
+def toggle_approval(id):
+    tag = Tag.query.get_or_404(id)
+    tag.approved = not tag.approved
+    tag.last_changed_by = current_user.username
+    db.session.commit()
+    return jsonify({
+        'status': 'success',
+        'approved': tag.approved,
+        'last_changed_by': tag.last_changed_by,
+        'message': f'Tag {tag.rfid} has been {"approved" if tag.approved else "unapproved"}'
+    })
+
+@app.route('/clear_messages', methods=['POST'])
+@login_required
+def clear_messages():
+    # Clear all flash messages stored in the session
+    session['_flashes'] = []
+    return jsonify({'status': 'success'})
+
+@app.route('/database/backup')
+@login_required
+def backup_database():
+    try:
+        # Create a backup of the database
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f'rfid_backup_{timestamp}.db'
+        
+        # Connect to the current database
+        source = sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', ''))
+        
+        # Create a backup file
+        backup_path = os.path.join('backups', backup_filename)
+        os.makedirs('backups', exist_ok=True)
+        
+        # Copy the database to the backup file
+        backup = sqlite3.connect(backup_path)
+        source.backup(backup)
+        
+        # Close the connections
+        backup.close()
+        source.close()
+        
+        # Prepare the backup file for download
+        return send_file(
+            backup_path,
+            as_attachment=True,
+            download_name=backup_filename,
+            mimetype='application/x-sqlite3'
+        )
+        
+    except Exception as e:
+        flash(f'Error creating backup: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/export/tags/csv')
+@login_required
+def export_tags_csv():
+    try:
+        # Create a StringIO object to write CSV data
+        si = io.StringIO()
+        cw = csv.writer(si)
+        
+        # Write headers
+        cw.writerow(['RFID', 'Label', 'Last Seen', 'Time Seen', 'Date Seen', 'Last Changed By', 'Approved'])
+        
+        # Write data
+        tags = Tag.query.all()
+        for tag in tags:
+            cw.writerow([
+                tag.rfid,
+                tag.label,
+                tag.last_seen,
+                tag.time_seen,
+                tag.date_seen or '',
+                tag.last_changed_by or '',
+                'Yes' if tag.approved else 'No'
+            ])
+        
+        # Prepare the response
+        output = si.getvalue()
+        si.close()
+        
+        return Response(
+            output,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=rfid_tags.csv',
+                'Content-Type': 'text/csv'
+            }
+        )
+        
+    except Exception as e:
+        flash(f'Error exporting CSV: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/import/tags/csv', methods=['GET', 'POST'])
+@login_required
+def import_tags_csv():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file uploaded', 'danger')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'danger')
+            return redirect(request.url)
+        
+        if not file.filename.endswith('.csv'):
+            flash('Please upload a CSV file', 'danger')
+            return redirect(request.url)
+        
+        try:
+            # Read the CSV file
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.reader(stream)
+            
+            # Skip header row
+            next(csv_input)
+            
+            # Process each row
+            success_count = 0
+            error_count = 0
+            
+            for row in csv_input:
+                try:
+                    if len(row) >= 7:  # Ensure we have all required fields
+                        rfid = row[0]
+                        label = row[1]
+                        last_seen = row[2]
+                        time_seen = row[3]
+                        date_seen = row[4] if row[4] else None
+                        last_changed_by = row[5] if row[5] else None
+                        approved = row[6].lower() == 'yes'
+                        
+                        # Check if tag already exists
+                        tag = Tag.query.filter_by(rfid=rfid).first()
+                        if tag:
+                            # Update existing tag
+                            tag.label = label
+                            tag.last_seen = last_seen
+                            tag.time_seen = time_seen
+                            tag.date_seen = date_seen
+                            tag.last_changed_by = current_user.username
+                            tag.approved = approved
+                        else:
+                            # Create new tag
+                            tag = Tag(
+                                rfid=rfid,
+                                label=label,
+                                last_seen=last_seen,
+                                time_seen=time_seen,
+                                date_seen=date_seen,
+                                last_changed_by=current_user.username,
+                                approved=approved
+                            )
+                            db.session.add(tag)
+                        
+                        success_count += 1
+                    else:
+                        error_count += 1
+                        
+                except Exception as e:
+                    error_count += 1
+                    continue
+            
+            db.session.commit()
+            
+            if success_count > 0:
+                flash(f'Successfully imported {success_count} tags', 'success')
+            if error_count > 0:
+                flash(f'Failed to import {error_count} tags', 'warning')
+                
+        except Exception as e:
+            flash(f'Error processing CSV file: {str(e)}', 'danger')
+        
+        return redirect(url_for('dashboard'))
+    
+    return render_template('import_csv.html')
+
+@app.route('/search/advanced', methods=['GET', 'POST'])
+@login_required
+def advanced_search():
+    if request.method == 'POST':
+        # Get search parameters
+        rfid = request.form.get('rfid', '')
+        label = request.form.get('label', '')
+        location = request.form.get('location', '')
+        approval_status = request.form.get('approval_status', '')
+        date_from = request.form.get('date_from', '')
+        date_to = request.form.get('date_to', '')
+        
+        # Build query
+        query = Tag.query
+        
+        if rfid:
+            query = query.filter(Tag.rfid.like(f'%{rfid}%'))
+        if label:
+            query = query.filter(Tag.label.like(f'%{label}%'))
+        if location:
+            query = query.filter(Tag.last_seen.like(f'%{location}%'))
+        if approval_status:
+            is_approved = approval_status == 'approved'
+            query = query.filter(Tag.approved == is_approved)
+        if date_from:
+            query = query.filter(Tag.date_seen >= date_from)
+        if date_to:
+            query = query.filter(Tag.date_seen <= date_to)
+        
+        # Execute query
+        results = query.all()
+        
+        return render_template('advanced_search.html', results=results)
+    
+    return render_template('advanced_search.html', results=None)
+
 if __name__ == '__main__':
     start_autosave()  
     
-    # Start the two RFID scanners in separate threads
+    # Start all four RFID scanners in separate threads
     rfid_thread_com3 = threading.Thread(target=run_rfid_scanner_com3)
     rfid_thread_com3.daemon = True
     rfid_thread_com3.start()
@@ -628,5 +936,13 @@ if __name__ == '__main__':
     rfid_thread_com4 = threading.Thread(target=run_rfid_scanner_com4)
     rfid_thread_com4.daemon = True
     rfid_thread_com4.start()
+
+    rfid_thread_com5 = threading.Thread(target=run_rfid_scanner_com5)
+    rfid_thread_com5.daemon = True
+    rfid_thread_com5.start()
+
+    rfid_thread_com6 = threading.Thread(target=run_rfid_scanner_com6)
+    rfid_thread_com6.daemon = True
+    rfid_thread_com6.start()
     
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -402,6 +402,7 @@ def scan_rfid():
     time_now = datetime.now().strftime("%H:%M:%S")
     date_now = datetime.now().strftime("%Y-%m-%d")
     
+    # Handle tracking tag
     tag = Tag.query.filter_by(rfid=rfid).first()
     if tag:
         # Update tag information
@@ -441,6 +442,27 @@ def scan_rfid():
             'timestamp': time_now
         })
         session.modified = True
+
+    # Handle inventory tag - ensure it exists in inventory
+    inventory_tag = InventoryTag.query.filter_by(rfid=rfid).first()
+    if not inventory_tag:
+        # Create new inventory tag based on tracking tag
+        inventory_tag = InventoryTag(
+            rfid=rfid,
+            label=tag.label,
+            last_seen=location,
+            time_seen=time_now,
+            date_seen=date_now,
+            approved=tag.approved
+        )
+        db.session.add(inventory_tag)
+    else:
+        # Update existing inventory tag
+        inventory_tag.last_seen = location
+        inventory_tag.time_seen = time_now
+        inventory_tag.date_seen = date_now
+        inventory_tag.label = tag.label  # Keep label in sync
+        inventory_tag.approved = tag.approved  # Keep approval status in sync
     
     db.session.commit()
     return "RFID Tag processed successfully", 200
@@ -457,13 +479,10 @@ def inventory_check():
     inventory_tags = InventoryTag.query.all()
     inventory_rfids = [tag.rfid for tag in inventory_tags]
     
-    # Get all tracking tags without filtering
+    # Get all tracking tags and create a stable snapshot
     tracking_tags = Tag.query.all()
-
-    # Check inventory for missing items and get missing status
-    missing_status = check_inventory()
     
-    # Group tags by location
+    # Group tags by location and store in a stable structure
     grouped_tags = {}
     locations = []
     
@@ -474,13 +493,26 @@ def inventory_check():
             locations.append(location)
             grouped_tags[location] = []
     
-    # Then, group tags by location
+    # Then, group tags by location and create stable copies of tag data
     for tag in tracking_tags:
         location = tag.last_seen if tag.last_seen else "Unknown Location"
+        tag_data = {
+            'id': tag.id,
+            'rfid': tag.rfid,
+            'label': tag.label,
+            'last_seen': tag.last_seen,
+            'time_seen': tag.time_seen,
+            'date_seen': tag.date_seen,
+            'last_changed_by': tag.last_changed_by,
+            'approved': tag.approved
+        }
         grouped_tags[location].append(tag)
     
     # Sort locations alphabetically
     locations.sort()
+    
+    # Check inventory for missing items and get missing status
+    missing_status = check_inventory()
     
     # Handle JSON format request for AJAX updates
     if request.args.get('format') == 'json':
