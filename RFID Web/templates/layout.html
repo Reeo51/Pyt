@@ -3,22 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Computer Engineering Thesis{% endblock %}</title>
+    <title>{% block title %}RFID Tracking System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --box-bg: #ffffff;
+            --text-color: #000000;
+            --table-border: #ddd;
+            --table-alt-row: #f9f9f9;
+            --link-color: #007bff;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --input-border: #ccc;
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --box-bg: #2c2c2c;
+            --text-color: #f0f0f0;
+            --table-border: #444;
+            --table-alt-row: #333;
+            --link-color: #4da3ff;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --input-border: #555;
+        }
+        
         body {
             font-family: monospace, 'Courier New', Courier, fixed-width;
-            background-color: #f0f2f5;
+            background-color: var(--bg-color);
             margin: 0;
             padding: 0;
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
         }
         .box {
             width: 95%;
             max-width: 1000px;
             margin: 20px auto;
             padding: 15px;
-            background-color: white;
+            background-color: var(--box-bg);
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 10px var(--shadow-color);
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
         table {
             width: 100%;
@@ -27,27 +53,34 @@
         th, td {
             padding: 8px;
             text-align: left;
-            border: 1px solid #ddd;
+            border: 1px solid var(--table-border);
             font-family: monospace, 'Courier New', Courier, fixed-width;
+            transition: border-color 0.3s;
         }
         th {
             background-color: #007bff;
             color: white;
         }
         tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: var(--table-alt-row);
+            transition: background-color 0.3s;
         }
         a {
-            color: #007bff;
+            color: var(--link-color);
             text-decoration: none;
+            transition: color 0.3s;
         }
         a:hover {
             text-decoration: underline;
         }
-        input, button {
+        input, button, select {
             padding: 8px;
             margin: 5px 0;
             font-family: monospace, 'Courier New', Courier, fixed-width;
+            background-color: var(--box-bg);
+            color: var(--text-color);
+            border: 1px solid var(--input-border);
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
         .rfid-code {
             font-family: monospace, 'Courier New', Courier, fixed-width;
@@ -55,6 +88,27 @@
             font-size: 0.95em;
             letter-spacing: 0.5px;
             line-height: 1.5;
+        }
+        
+        /* Theme toggle button */
+        .theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 10px;
+            border: none;
+            cursor: pointer;
+            font-family: monospace, 'Courier New', Courier, fixed-width;
+        }
+        
+        .theme-toggle:hover {
+            opacity: 0.9;
+            text-decoration: none;
         }
         
         /* Mobile-specific styles */
@@ -75,7 +129,7 @@
                 font-size: 0.9em;
             }
             
-            input, button {
+            input, button, select {
                 width: 100%;
                 box-sizing: border-box;
             }
@@ -87,7 +141,7 @@
                 gap: 10px;
             }
             
-            .button-group a {
+            .button-group a, .button-group button {
                 text-align: center;
                 margin: 5px 0;
             }
@@ -99,9 +153,305 @@
                 width: 120px; /* Limit width to force wrapping */
             }
         }
+        
+        /* Alert notifications styles */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+        }
+        
+        /* Flash messages container */
+        #flash-messages {
+            width: 95%;
+            max-width: 1000px;
+            margin: 10px auto;
+        }
     </style>
 </head>
 <body>
+    <!-- Flash Messages Container -->
+    <div id="flash-container" style="position: fixed; top: 20px; right: 20px; z-index: 1000; width: 300px;"></div>
+    
     {% block content %}{% endblock %}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create and preload the alert sound
+            const alertSound = new Audio('/static/sounds/alert.mp3');
+            alertSound.load(); // Preload the sound
+            
+            // Function to play sound with user interaction handling
+            async function playAlertSound() {
+                try {
+                    // Reset the sound to the beginning
+                    alertSound.currentTime = 0;
+                    // Play the sound
+                    await alertSound.play();
+                    console.log('Alert sound played successfully');
+                } catch (error) {
+                    console.error('Error playing alert sound:', error);
+                }
+            }
+
+            // Apply theme from localStorage
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            
+            // Setup theme toggle functionality
+            const themeToggles = document.querySelectorAll('.theme-toggle');
+            themeToggles.forEach(toggle => {
+                // Set initial text based on current theme
+                if (toggle.textContent === '') {
+                    toggle.textContent = currentTheme === 'dark' ? '🌞 Light Mode' : '🌙 Dark Mode';
+                }
+                
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const currentTheme = document.documentElement.getAttribute('data-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    // Update theme
+                    document.documentElement.setAttribute('data-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+                    
+                    // Update button text
+                    themeToggles.forEach(btn => {
+                        btn.textContent = newTheme === 'dark' ? '🌞 Light Mode' : '🌙 Dark Mode';
+                    });
+                });
+            });
+            
+            // Function to show flash message
+            function showFlashMessage(message, category) {
+                const flashContainer = document.getElementById('flash-container');
+                
+                const alertDiv = document.createElement('div');
+                alertDiv.style.padding = '10px';
+                alertDiv.style.borderRadius = '5px';
+                alertDiv.style.marginBottom = '10px';
+                alertDiv.style.width = '100%';
+                alertDiv.style.boxSizing = 'border-box';
+                alertDiv.style.wordBreak = 'break-word';
+                alertDiv.style.overflowWrap = 'break-word';
+                
+                // Set styles based on category
+                if (category === 'success') {
+                    alertDiv.style.backgroundColor = '#d4edda';
+                    alertDiv.style.color = '#155724';
+                    alertDiv.style.border = '1px solid #c3e6cb';
+                } else if (category === 'danger') {
+                    alertDiv.style.backgroundColor = '#f8d7da';
+                    alertDiv.style.color = '#721c24';
+                    alertDiv.style.border = '1px solid #f5c6cb';
+                    // Play sound for danger alerts
+                    playAlertSound();
+                } else if (category === 'warning') {
+                    alertDiv.style.backgroundColor = '#fff3cd';
+                    alertDiv.style.color = '#856404';
+                    alertDiv.style.border = '1px solid #ffeeba';
+                    // Play sound for warning alerts
+                    playAlertSound();
+                } else {
+                    alertDiv.style.backgroundColor = '#cce5ff';
+                    alertDiv.style.color = '#004085';
+                    alertDiv.style.border = '1px solid #b8daff';
+                }
+                
+                alertDiv.textContent = message;
+                flashContainer.appendChild(alertDiv);
+                
+                // Auto-remove after 10 seconds
+                setTimeout(() => {
+                    alertDiv.style.opacity = '0';
+                    alertDiv.style.transition = 'opacity 0.5s';
+                    setTimeout(() => alertDiv.remove(), 500);
+                }, 10000);
+            }
+            
+            // Function to update page content
+            function updatePageContent() {
+                const currentPath = window.location.pathname;
+                if (currentPath === '/dashboard' || currentPath === '/inventory_check') {
+                    fetch(window.location.pathname + '?format=json', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const content = document.getElementById('content');
+                        if (content) {
+                            // Update the content without full page reload
+                            const locations = data.locations || Object.keys(data.grouped_tags);
+                            let newHtml = '';
+                            
+                            locations.forEach(location => {
+                                const tags = data.grouped_tags[location];
+                                if (tags && tags.length > 0) {
+                                    newHtml += `
+                                        <div class="location-section">
+                                            <h3>${location}</h3>
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>RFID</th>
+                                                        <th>Label</th>
+                                                        <th>Last Seen</th>
+                                                        <th>Time</th>
+                                                        <th>Approval Status</th>
+                                                        <th>Approved By</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                    `;
+                                    
+                                    tags.forEach(tag => {
+                                        const rfidDisplay = tag.rfid.length > 6 ? 
+                                            `<span style="display: block;">${tag.rfid.slice(0, -6)}</span><span style="display: block;">${tag.rfid.slice(-6)}</span>` : 
+                                            tag.rfid;
+                                            
+                                        newHtml += `
+                                            <tr>
+                                                <td class="rfid-code">${rfidDisplay}</td>
+                                                <td>${tag.label}</td>
+                                                <td>${tag.last_seen}</td>
+                                                <td>${tag.time_seen}</td>
+                                                <td>
+                                                    <button class="approval-toggle-btn" data-id="${tag.id}" 
+                                                        style="padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; 
+                                                        background-color: ${tag.approved ? '#4CAF50' : '#f44336'}; color: white;">
+                                                        ${tag.approved ? 'Approved' : 'Not Approved'}
+                                                    </button>
+                                                </td>
+                                                <td>${tag.last_changed_by || 'N/A'}</td>
+                                                <td>
+                                                    <a href="/edit/${tag.id}" style="color: #4CAF50;">Edit</a> | 
+                                                    <a href="/delete/${tag.id}" style="color: red;">Delete</a>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    });
+                                    
+                                    newHtml += `
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    `;
+                                }
+                            });
+                            
+                            // Update the content
+                            const mainContent = content.querySelector('.box');
+                            if (mainContent) {
+                                const contentArea = mainContent.querySelector('.content-area') || mainContent;
+                                contentArea.innerHTML = newHtml;
+                            }
+                            
+                            // Reattach event listeners
+                            attachEventListeners();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error updating content:', error);
+                    });
+                }
+            }
+            
+            // Function to attach event listeners to dynamic elements
+            function attachEventListeners() {
+                // Reattach approval button listeners
+                document.querySelectorAll('.approval-toggle-btn').forEach(button => {
+                    button.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        const tagId = this.getAttribute('data-id');
+                        
+                        fetch(`/toggle_approval/${tagId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                this.style.backgroundColor = data.approved ? '#4CAF50' : '#f44336';
+                                this.textContent = data.approved ? 'Approved' : 'Not Approved';
+                                
+                                const row = this.closest('tr');
+                                const approvedByCell = row.querySelector('td:nth-child(6)');
+                                if (approvedByCell) {
+                                    approvedByCell.textContent = data.last_changed_by;
+                                }
+                                
+                                showFlashMessage(data.message, 'success');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error toggling approval:', error);
+                        });
+                    });
+                });
+            }
+            
+            // Connect to Server-Sent Events
+            let evtSource = new EventSource('/events');
+            
+            // Handle incoming messages from the server
+            evtSource.onmessage = function(event) {
+                console.log('Received SSE event:', event.data);
+                const data = JSON.parse(event.data);
+                
+                // Handle alerts
+                if (data.alerts && data.alerts.length > 0) {
+                    data.alerts.forEach(alert => {
+                        showFlashMessage(alert.message, alert.category);
+                    });
+                }
+                
+                // Handle tag updates
+                if (data.tag_update) {
+                    updatePageContent();
+                }
+            };
+            
+            // Handle SSE errors
+            evtSource.onerror = function(error) {
+                console.error('SSE Error:', error);
+                // Try to reconnect after 5 seconds
+                setTimeout(() => {
+                    evtSource.close();
+                    evtSource = new EventSource('/events');
+                }, 5000);
+            };
+            
+            // Initial event listener attachment
+            attachEventListeners();
+            
+            // Set up periodic content refresh (every 5 seconds)
+            setInterval(updatePageContent, 5000);
+        });
+    </script>
 </body>
 </html>

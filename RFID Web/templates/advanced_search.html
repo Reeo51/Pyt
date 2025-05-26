@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="box">
+    <h2>Advanced Search</h2>
+    
+    <form method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px;">RFID:</label>
+                <input type="text" name="rfid" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px;">Label:</label>
+                <input type="text" name="label" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            </div>
+        </div>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px;">Location:</label>
+                <select name="location" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+                    <option value="">All Locations</option>
+                    {% for location in locations %}
+                    <option value="{{ location }}">{{ location }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px;">Approval Status:</label>
+                <select name="approval_status" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+                    <option value="all">All</option>
+                    <option value="approved">Approved</option>
+                    <option value="unapproved">Not Approved</option>
+                </select>
+            </div>
+        </div>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px;">Date From:</label>
+                <input type="date" name="date_from" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px;">Date To:</label>
+                <input type="date" name="date_to" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button type="submit" style="width: 170px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: center; font-size: 16px;">Search</button>
+            <a href="{{ url_for('dashboard') }}" style="width: 170px; padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px; cursor: pointer; text-align: center; font-size: 16px; display: inline-block; box-sizing: border-box;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %} 

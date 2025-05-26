@@ -1,10 +1,11 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<div id="content">
     <div class="box">
         <h2>Inventory Check</h2>
 
-        <!-- Flash Messages -->
+        <!-- Flash Messages - Moved to appear after heading and before tools -->
         <div id="flash-container" style="margin-top: 20px; width: 100%; box-sizing: border-box;">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -27,17 +28,18 @@
         </div>
 
         <!-- Inventory Search Form -->
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; background-color: #f9f9f9; width: 100%; box-sizing: border-box;">
-            <h3 style="margin-top: 0; margin-bottom: 10px;">Inventory Tools</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; border: 1px solid var(--table-border); padding: 15px; border-radius: 5px; background-color: var(--box-bg); width: 100%; box-sizing: border-box;">
+            <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--text-color);">Inventory Tools</h3>
             
+            <!-- Clear All Messages button - Move to tools section -->
             <div class="button-group" style="display: flex; flex-wrap: wrap; margin-bottom: 15px; gap: 10px; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;">
                 <a href="{{ url_for('sync_inventory') }}" style="padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; text-align: center; margin-bottom: 5px;">Sync Inventory with Tracking</a>
                 <button id="clear-all-messages" style="padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 5px;">Clear All Messages</button>
             </div>
             
-            <div style="border-top: 1px solid #ddd; padding-top: 15px; width: 100%; box-sizing: border-box;">
-                <h4 style="margin-top: 0; margin-bottom: 10px;">Inventory Search</h4>
-                <input type="text" id="search-term" placeholder="Enter RFID or Label" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; width: 100%; box-sizing: border-box;">
+            <div style="border-top: 1px solid var(--table-border); padding-top: 15px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--text-color);">Inventory Search</h4>
+                <input type="text" id="search-term" placeholder="Enter RFID or Label" style="padding: 10px; border-radius: 5px; border: 1px solid var(--input-border); width: 100%; box-sizing: border-box; background-color: var(--box-bg); color: var(--text-color);">
                 <div class="button-group" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; width: 100%; box-sizing: border-box;">
                     <button id="start-inventory" style="padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 5px;">Start Inventory Search</button>
                     <button id="finish-inventory" style="padding: 10px 20px; background-color: #FF5722; color: white; border: none; border-radius: 5px; cursor: pointer; display: none; margin-bottom: 5px;">Finish Inventory</button>
@@ -47,60 +49,64 @@
 
         <!-- Search Results -->
         <div id="search-results" style="margin-top: 20px; display: none; width: 100%; box-sizing: border-box;">
-            <h3>Search Results</h3>
-            <div id="results-container" style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; width: 100%; box-sizing: border-box; word-break: break-word; overflow-wrap: break-word;">
+            <h3 style="color: var(--text-color);">Search Results</h3>
+            <div id="results-container" style="border: 1px solid var(--table-border); border-radius: 5px; padding: 10px; width: 100%; box-sizing: border-box; word-break: break-word; overflow-wrap: break-word; background-color: var(--box-bg); color: var(--text-color);">
                 <!-- Results will be populated here by JavaScript -->
             </div>
         </div>
 
         <!-- Table of Tags - Using the tracking system data -->
         <div style="width: 100%; overflow-x: auto; box-sizing: border-box;">
-            <table style="width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #dee2e6;">
+            {% for location in locations %}
+            <h3 style="margin-top: 20px; padding: 8px; background-color: #007bff; color: white; border-radius: 5px;">{{ location }}</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid var(--table-border);">
                 <thead>
                     <tr>
-                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6;">RFID</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6;">Label</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid #dee2e6;">Last Seen</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6;">Time</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6; display: none;">Date</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid #dee2e6;">Status</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid var(--table-border);">RFID</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid var(--table-border);">Label</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: left; border: 1px solid var(--table-border);">Last Seen</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid var(--table-border);">Time</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid var(--table-border); display: none;">Date</th>
+                        <th style="padding: 8px; background-color: #007bff; color: white; text-align: center; border: 1px solid var(--table-border);">Status</th>
                     </tr>
                 </thead>
-                <tbody id="inventory-list">
-                    {% for tag in tracking_tags %}
-                        <tr style="{% if loop.index is divisibleby 2 %}background-color: #f2f2f2;{% else %}background-color: white;{% endif %} border: 1px solid #dee2e6;">
-                            <td style="padding: 8px; border: 1px solid #dee2e6;" class="rfid-code">
+                <tbody id="inventory-list-{{ location|replace(' ', '-')|replace('_', '-')|lower }}">
+                    {% for tag in grouped_tags[location] %}
+                        <tr style="{% if loop.index is divisibleby 2 %}background-color: var(--table-alt-row);{% else %}background-color: var(--box-bg);{% endif %} border: 1px solid var(--table-border);">
+                            <td style="padding: 8px; border: 1px solid var(--table-border); color: var(--text-color);" class="rfid-code">
                                 {% if tag.rfid|length > 6 %}
                                     {{ tag.rfid[:-6] }}<br>{{ tag.rfid[-6:] }}
                                 {% else %}
                                     {{ tag.rfid }}
                                 {% endif %}
                             </td>
-                            <td style="padding: 8px; border: 1px solid #dee2e6;">{{ tag.label }}</td>
-                            <td style="padding: 8px; border: 1px solid #dee2e6;">{{ tag.last_seen }}</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">{{ tag.time_seen }}</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; display: none;">{{ tag.date_seen if tag.date_seen else 'N/A' }}</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">
+                            <td style="padding: 8px; border: 1px solid var(--table-border); color: var(--text-color);">{{ tag.label }}</td>
+                            <td style="padding: 8px; border: 1px solid var(--table-border); color: var(--text-color);">{{ tag.last_seen }}</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid var(--table-border); color: var(--text-color);">{{ tag.time_seen }}</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid var(--table-border); display: none; color: var(--text-color);">{{ tag.date_seen if tag.date_seen else 'N/A' }}</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid var(--table-border);">
                                 {% if tag.rfid in missing_rfids %}
-                                    <span style="color: #dc3545; font-weight: bold;">Missing</span>
+                                    <span style="color: #ff4444; font-weight: bold;">Missing</span>
                                 {% elif tag.rfid in time_missing_rfids %}
-                                    <span style="color: #dc3545; font-weight: bold;">Not Scanned (24h+)</span>
+                                    <span style="color: #ff4444; font-weight: bold;">Not Scanned (24h+)</span>
                                 {% elif tag.rfid in time_warning_rfids %}
-                                    <span style="color: #fd7e14; font-weight: bold;">Not Scanned (8h+)</span>
+                                    <span style="color: #ff8800; font-weight: bold;">Not Scanned (8h+)</span>
                                 {% elif tag.rfid in inventory_rfids %}
-                                    <span style="color: #28a745;">In Inventory</span>
+                                    <span style="color: #00C851;">In Inventory</span>
                                 {% else %}
-                                    <span style="color: #6c757d;">Unknown</span>
+                                    <span style="color: #999;">Unknown</span>
                                 {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            {% endfor %}
         </div>
 
         <!-- Logout and Mode Select Button -->
         <div class="button-group" style="margin-top: 20px; text-align: right;">
+            <button class="theme-toggle" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;"></button>
             <a href="{{ url_for('mode_selection') }}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Mode Select</a>
             <a href="{{ url_for('logout') }}" style="display: inline-block; padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
         </div>
@@ -131,18 +137,34 @@
             // Clear all messages (both flash and search results)
             if (clearAllMessagesButton) {
                 clearAllMessagesButton.addEventListener('click', function() {
-                    // Clear flash messages
-                    const flashMessages = document.querySelector('.flash-messages');
-                    if (flashMessages) {
-                        flashMessages.style.display = 'none';
-                        if (clearMessagesButton) {
-                            clearMessagesButton.style.display = 'none';
+                    // Call server to clear flash messages
+                    fetch('/clear_messages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
-                    }
-                    
-                    // Clear search results
-                    searchResults.style.display = 'none';
-                    resultsContainer.innerHTML = '';
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Clear flash messages on UI
+                        const flashMessages = document.querySelector('.flash-messages');
+                        if (flashMessages) {
+                            flashMessages.style.display = 'none';
+                            if (clearMessagesButton) {
+                                clearMessagesButton.style.display = 'none';
+                            }
+                        }
+                        
+                        // Clear search results
+                        searchResults.style.display = 'none';
+                        if (resultsContainer) {
+                            resultsContainer.innerHTML = '';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error clearing messages:', error);
+                    });
                 });
             }
             
@@ -236,4 +258,5 @@
             });
         });
     </script>
+</div>
 {% endblock %}

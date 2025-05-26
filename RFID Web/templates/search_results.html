@@ -1,0 +1,150 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="box">
+    <h2>Search Results</h2>
+    
+    <!-- Search Criteria Summary -->
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #ddd;">
+        <h3 style="margin-top: 0; margin-bottom: 10px;">Search Criteria</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            {% if search_params.rfid %}
+            <div>
+                <strong>RFID:</strong> {{ search_params.rfid }}
+            </div>
+            {% endif %}
+            
+            {% if search_params.label %}
+            <div>
+                <strong>Label:</strong> {{ search_params.label }}
+            </div>
+            {% endif %}
+            
+            {% if search_params.location %}
+            <div>
+                <strong>Location:</strong> {{ search_params.location }}
+            </div>
+            {% endif %}
+            
+            {% if search_params.approval_status != 'all' %}
+            <div>
+                <strong>Approval:</strong> {{ search_params.approval_status }}
+            </div>
+            {% endif %}
+            
+            {% if search_params.date_from or search_params.date_to %}
+            <div>
+                <strong>Date Range:</strong> {{ search_params.date_from }} to {{ search_params.date_to }}
+            </div>
+            {% endif %}
+        </div>
+        <div style="margin-top: 10px;">
+            <strong>Results:</strong> {{ tags|length }} item(s) found
+        </div>
+        
+        <div style="margin-top: 15px;">
+            <a href="{{ url_for('advanced_search') }}" style="text-decoration: none; padding: 8px 15px; background-color: #2196F3; color: white; border: none; border-radius: 5px; margin-right: 10px;">Modify Search</a>
+            <a href="{{ url_for('dashboard') }}" style="text-decoration: none; padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 5px;">Return to Dashboard</a>
+        </div>
+    </div>
+    
+    {% if tags %}
+    <div style="overflow-x: auto;">
+        {% for location in locations %}
+        <h3 style="margin-top: 20px; padding: 8px; background-color: #007bff; color: white; border-radius: 5px;">{{ location }}</h3>
+        <table style="border-collapse: collapse; margin-top: 10px; width: 100%;">
+            <thead>
+                <tr style="background-color: #f4f4f4; text-align: left;">
+                    <th style="padding: 8px; background-color: #007bff; color: white;">RFID</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white;">Label</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white;">Last Seen</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white;">Time</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white; display: none;">Date</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white;">Approval Status</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white;">Approved By</th>
+                    <th style="padding: 8px; background-color: #007bff; color: white;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tag in grouped_tags[location] %}
+                <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
+                    <td style="padding: 8px; width: auto;" class="rfid-code">
+                        {% if tag.rfid|length > 6 %}
+                            <span style="display: block; white-space: nowrap;">{{ tag.rfid[:-6] }}</span>
+                            <span style="display: block; white-space: nowrap;">{{ tag.rfid[-6:] }}</span>
+                        {% else %}
+                            <span style="display: block; white-space: nowrap;">{{ tag.rfid }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 8px;">{{ tag.label }}</td>
+                    <td style="padding: 8px;">{{ tag.last_seen }}</td>
+                    <td style="padding: 8px;">{{ tag.time_seen }}</td>
+                    <td style="padding: 8px; display: none;">{{ tag.date_seen if tag.date_seen else 'N/A' }}</td>
+                    <td style="padding: 8px;">
+                        <button class="approval-toggle-btn" data-id="{{ tag.id }}" style="padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; {% if tag.approved %}background-color: #4CAF50; color: white;{% else %}background-color: #f44336; color: white;{% endif %}">
+                            {{ 'Approved' if tag.approved else 'Not Approved' }}
+                        </button>
+                    </td>
+                    <td style="padding: 8px;">{{ tag.last_changed_by if tag.last_changed_by else 'N/A' }}</td>
+                    <td style="padding: 8px;">
+                        <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
+                        <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 20px; background-color: #f9f9f9; border-radius: 5px; margin-top: 20px;">
+        <p style="font-size: 18px; color: #666;">No results found matching your criteria.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle approval toggle button clicks
+        const approvalButtons = document.querySelectorAll('.approval-toggle-btn');
+        approvalButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                const tagId = this.getAttribute('data-id');
+                
+                // Send AJAX request to toggle approval
+                fetch(`/toggle_approval/${tagId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update button appearance
+                        if (data.approved) {
+                            this.style.backgroundColor = '#4CAF50';
+                            this.textContent = 'Approved';
+                        } else {
+                            this.style.backgroundColor = '#f44336';
+                            this.textContent = 'Not Approved';
+                        }
+                        
+                        // Update the "Approved By" cell
+                        const row = this.closest('tr');
+                        const approvedByCell = row.querySelector('td:nth-child(7)');
+                        if (approvedByCell) {
+                            approvedByCell.textContent = data.last_changed_by;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error toggling approval:', error);
+                });
+            });
+        });
+    });
+</script>
+{% endblock %} 

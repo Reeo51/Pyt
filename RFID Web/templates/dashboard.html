@@ -1,17 +1,40 @@
 {% extends "layout.html" %}
 
 {% block content %}
-    <meta http-equiv="refresh" content="5">  <!-- Page auto-refresh every 5 seconds -->
-
+<div id="content">
     <div class="box">
         <h2>Dashboard</h2>
         
-        <!-- Search Form -->
-        <form method="GET" action="{{ url_for('dashboard') }}" style="margin-bottom: 20px;">
-            <input type="text" name="search" placeholder="Search RFID or Label" value="{{ request.args.get('search') }}" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
-            <input type="submit" value="Search" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-        </form>
+        <!-- Flash Messages Container -->
+        <div id="flash-container" style="margin-top: 20px; width: 100%; box-sizing: border-box;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages" style="width: 100%; box-sizing: border-box;">
+                        {% for category, message in messages %}
+                            <div style="padding: 10px; border-radius: 5px; margin-bottom: 10px; width: 100%; box-sizing: border-box; 
+                                        word-break: break-word; overflow-wrap: break-word;
+                                        {% if category == 'success' %} background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+                                        {% elif category == 'error' or category == 'danger' %} background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+                                        {% elif category == 'warning' %} background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
+                                        {% else %} background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; 
+                                        {% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button id="clear-messages" style="padding: 8px 15px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 15px;">Clear Messages</button>
+                {% endif %}
+            {% endwith %}
+        </div>
 
+        <!-- Action Buttons -->
+        <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{{ url_for('advanced_search') }}" style="text-decoration: none; padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 5px;">Advanced Search</a>
+            <a href="{{ url_for('backup_database') }}" style="text-decoration: none; padding: 10px 20px; background-color: #673AB7; color: white; border: none; border-radius: 5px;">Backup Database</a>
+            <a href="{{ url_for('export_tags_csv') }}" style="text-decoration: none; padding: 10px 20px; background-color: #FF9800; color: white; border: none; border-radius: 5px;">Export to CSV</a>
+            <a href="{{ url_for('import_tags_csv') }}" style="text-decoration: none; padding: 10px 20px; background-color: #009688; color: white; border: none; border-radius: 5px;">Import from CSV</a>
+        </div>
+        
         <!-- RFID and Label Input Form -->
         <form method="POST" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
             <input type="text" name="rfid" placeholder="RFID" required style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
@@ -19,50 +42,227 @@
             <input type="submit" value="Add RFID" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
         </form>
 
-        <!-- Table of Tags -->
-        <div style="overflow-x: auto;">
-            <table style="border-collapse: collapse; margin-top: 20px;">
-                <thead>
-                    <tr style="background-color: #f4f4f4; text-align: left;">
-                        <th style="padding: 8px; background-color: #007bff; color: white;">RFID</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white;">Label</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white;">Last Seen</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white;">Time</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white; display: none;">Date</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white;">Actions</th>
-                        <th style="padding: 8px; background-color: #007bff; color: white;">Changed By</th>
-                    </tr>
-                </thead>
-                <tbody id="tags-list">
-                    {% for tag in tags %}
-                    <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
-                        <td style="padding: 8px;" class="rfid-code">
-                            {% if tag.rfid|length > 6 %}
-                                {{ tag.rfid[:-6] }}<br>{{ tag.rfid[-6:] }}
-                            {% else %}
-                                {{ tag.rfid }}
-                            {% endif %}
-                        </td>
-                        <td style="padding: 8px;">{{ tag.label }}</td>
-                        <td style="padding: 8px;">{{ tag.last_seen }}</td>
-                        <td style="padding: 8px;">{{ tag.time_seen }}</td>
-                        <td style="padding: 8px; display: none;">{{ tag.date_seen if tag.date_seen else 'N/A' }}</td>
-                        <td style="padding: 8px;">
-                            <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
-                            <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
-                        </td>
-                        <td style="padding: 8px;">{{ tag.last_changed_by if tag.last_changed_by else 'N/A' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Content Area -->
+        <div class="content-area">
+            {% for location in locations %}
+            <div class="location-section">
+                <h3 style="margin-top: 20px; padding: 8px; background-color: #007bff; color: white; border-radius: 5px;">{{ location }}</h3>
+                <table style="border-collapse: collapse; margin-top: 10px; width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; background-color: #007bff; color: white;">RFID</th>
+                            <th style="padding: 8px; background-color: #007bff; color: white;">Label</th>
+                            <th style="padding: 8px; background-color: #007bff; color: white;">Last Seen</th>
+                            <th style="padding: 8px; background-color: #007bff; color: white;">Time</th>
+                            <th style="padding: 8px; background-color: #007bff; color: white;">Approval Status</th>
+                            <th style="padding: 8px; background-color: #007bff; color: white;">Approved By</th>
+                            <th style="padding: 8px; background-color: #007bff; color: white;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tags-list-{{ location|replace(' ', '-')|replace('_', '-')|lower }}">
+                        {% for tag in grouped_tags[location] %}
+                        <tr style="border-bottom: 1px solid #ddd;" data-rfid="{{ tag.rfid }}">
+                            <td style="padding: 8px; width: auto;" class="rfid-code">
+                                {% if tag.rfid|length > 6 %}
+                                    <span style="display: block; white-space: nowrap;">{{ tag.rfid[:-6] }}</span>
+                                    <span style="display: block; white-space: nowrap;">{{ tag.rfid[-6:] }}</span>
+                                {% else %}
+                                    <span style="display: block; white-space: nowrap;">{{ tag.rfid }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 8px;">{{ tag.label }}</td>
+                            <td style="padding: 8px;">{{ tag.last_seen }}</td>
+                            <td style="padding: 8px;">{{ tag.time_seen }}</td>
+                            <td style="padding: 8px;">
+                                <button class="approval-toggle-btn" data-id="{{ tag.id }}" 
+                                    style="padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; 
+                                    background-color: {% if tag.approved %}#4CAF50{% else %}#f44336{% endif %}; color: white;">
+                                    {{ 'Approved' if tag.approved else 'Not Approved' }}
+                                </button>
+                            </td>
+                            <td style="padding: 8px;">{{ tag.last_changed_by if tag.last_changed_by else 'N/A' }}</td>
+                            <td style="padding: 8px;">
+                                <a href="{{ url_for('edit', id=tag.id) }}" style="text-decoration: none; color: #4CAF50;">Edit</a> | 
+                                <a href="{{ url_for('delete', id=tag.id) }}" style="text-decoration: none; color: red;">Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
         </div>
 
         <!-- Buttons for Mode Select and Logout -->
         <div class="button-group" style="margin-top: 20px; text-align: right;">
+            <button class="theme-toggle" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;"></button>
             <a href="{{ url_for('mode_selection') }}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Mode Select</a>
             <a href="{{ url_for('logout') }}" style="display: inline-block; padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle clear messages button click
+            const clearMessagesButton = document.getElementById('clear-messages');
+            if (clearMessagesButton) {
+                clearMessagesButton.addEventListener('click', function() {
+                    fetch('/clear_messages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const flashMessages = document.querySelector('.flash-messages');
+                        if (flashMessages) {
+                            flashMessages.style.display = 'none';
+                            clearMessagesButton.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error clearing messages:', error);
+                    });
+                });
+            }
+
+            // Handle approval toggle button clicks
+            const approvalButtons = document.querySelectorAll('.approval-toggle-btn');
+            approvalButtons.forEach(button => {
+                button.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const tagId = this.getAttribute('data-id');
+                    
+                    fetch(`/toggle_approval/${tagId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            this.style.backgroundColor = data.approved ? '#4CAF50' : '#f44336';
+                            this.textContent = data.approved ? 'Approved' : 'Not Approved';
+                            
+                            const row = this.closest('tr');
+                            const approvedByCell = row.querySelector('td:nth-child(6)');
+                            if (approvedByCell) {
+                                approvedByCell.textContent = data.last_changed_by;
+                            }
+                            
+                            // Only show warning message and play sound if item becomes unapproved
+                            if (!data.approved) {
+                                const rfidCell = row.querySelector('.rfid-code');
+                                const labelCell = row.querySelector('td:nth-child(2)');
+                                if (rfidCell && labelCell) {
+                                    const rfid = rfidCell.textContent.trim();
+                                    const label = labelCell.textContent.trim();
+                                    showFlashMessage(`Unapproved item detected - RFID: ${rfid}, Label: ${label}`, 'error');
+                                    playAlertSound();
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error toggling approval:', error);
+                    });
+                });
+            });
+
+            // Function to show flash message
+            function showFlashMessage(message, category) {
+                const flashContainer = document.querySelector('.flash-messages');
+                if (flashContainer) {
+                    const flashMessage = document.createElement('div');
+                    Object.assign(flashMessage.style, {
+                        padding: '10px',
+                        borderRadius: '5px',
+                        marginBottom: '10px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word'
+                    });
+
+                    if (category === 'success') {
+                        Object.assign(flashMessage.style, {
+                            backgroundColor: '#d4edda',
+                            color: '#155724',
+                            border: '1px solid #c3e6cb'
+                        });
+                    } else if (category === 'warning') {
+                        Object.assign(flashMessage.style, {
+                            backgroundColor: '#fff3cd',
+                            color: '#856404',
+                            border: '1px solid #ffeeba'
+                        });
+                    } else if (category === 'error') {
+                        Object.assign(flashMessage.style, {
+                            backgroundColor: '#f8d7da',
+                            color: '#721c24',
+                            border: '1px solid #f5c6cb'
+                        });
+                        // Play alert sound for unapproved items
+                        playAlertSound();
+                    }
+
+                    flashMessage.textContent = message;
+                    flashContainer.insertBefore(flashMessage, flashContainer.firstChild);
+                    flashContainer.style.display = 'block';
+
+                    // Don't auto-remove error messages for unapproved items
+                    if (category !== 'error') {
+                        setTimeout(() => {
+                            flashMessage.style.opacity = '0';
+                            flashMessage.style.transition = 'opacity 0.5s';
+                            setTimeout(() => flashMessage.remove(), 500);
+                        }, 3000);
+                    }
+                }
+            }
+
+            // Function to play alert sound
+            function playAlertSound() {
+                const audio = new Audio('/static/sounds/alert.mp3');
+                audio.play().catch(error => console.log('Error playing sound:', error));
+            }
+
+            // Function to check for unapproved items
+            function checkUnapprovedItems() {
+                const tables = document.querySelectorAll('tbody[id^="tags-list-"]');
+                tables.forEach(table => {
+                    const unapprovedButtons = table.querySelectorAll('button.approval-toggle-btn');
+                    unapprovedButtons.forEach(button => {
+                        if (button.textContent.trim() === 'Not Approved') {
+                            const row = button.closest('tr');
+                            const rfidCell = row.querySelector('.rfid-code');
+                            const labelCell = row.querySelector('td:nth-child(2)');
+                            if (rfidCell && labelCell) {
+                                const rfid = rfidCell.textContent.trim();
+                                const label = labelCell.textContent.trim();
+                                showFlashMessage(`Unapproved item detected - RFID: ${rfid}, Label: ${label}`, 'error');
+                                playAlertSound();
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Simple page refresh every 5 seconds
+            setInterval(function() {
+                window.location.reload();
+            }, 5000);
+
+            // Check for unapproved items when page loads
+            checkUnapprovedItems();
+        });
+    </script>
+
+    <!-- Add audio element for alert sound -->
+    <audio id="alert-sound" src="{{ url_for('static', filename='sounds/alert.mp3') }}" preload="auto"></audio>
+</div>
 {% endblock %}

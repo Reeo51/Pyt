@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="box">
+    <h2>Import Tags from CSV File</h2>
+    
+    <!-- Flash Messages Container -->
+    <div id="flash-container" style="margin-top: 20px; width: 100%; box-sizing: border-box;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="width: 100%; box-sizing: border-box;">
+                    {% for category, message in messages %}
+                        <div style="padding: 10px; border-radius: 5px; margin-bottom: 10px; width: 100%; box-sizing: border-box; 
+                                    word-break: break-word; overflow-wrap: break-word;
+                                    {% if category == 'success' %} background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+                                    {% elif category == 'error' or category == 'danger' %} background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+                                    {% elif category == 'warning' %} background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
+                                    {% else %} background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; 
+                                    {% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+    
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #ddd;">
+        <h3 style="margin-top: 0; margin-bottom: 10px;">CSV Format Instructions</h3>
+        <p>Your CSV file should have the following columns:</p>
+        <ol style="margin-left: 20px;">
+            <li><strong>ID</strong> - A unique identifier (will be generated if left blank)</li>
+            <li><strong>RFID</strong> - The RFID tag code (required)</li>
+            <li><strong>Label</strong> - A descriptive label for the tag (required)</li>
+            <li><strong>Last Seen</strong> - The location where the tag was last seen</li>
+            <li><strong>Time Seen</strong> - The time the tag was last seen (HH:MM:SS format)</li>
+            <li><strong>Date Seen</strong> - The date the tag was last seen (YYYY-MM-DD format)</li>
+            <li><strong>Changed By</strong> - Username of the person who last changed the tag</li>
+            <li><strong>Approved</strong> - "Yes" or "No" to indicate approval status</li>
+        </ol>
+        <p>Example: <code>1,E280689400005032OD,Power Supply 1,Communication Laboratory,14:25:16,2023-10-15,admin,Yes</code></p>
+        <p>First row should contain column headers.</p>
+    </div>
+    
+    <form method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px;">
+        <div style="margin-bottom: 10px;">
+            <label for="file" style="display: block; margin-bottom: 5px;">Select CSV File:</label>
+            <input type="file" name="file" id="file" accept=".csv" style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%;">
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button type="submit" style="width: 170px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: center; font-size: 16px;">Import Data</button>
+            <a href="{{ url_for('dashboard') }}" style="width: 170px; padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px; cursor: pointer; text-align: center; font-size: 16px; display: inline-block; box-sizing: border-box;">Cancel</a>
+        </div>
+    </form>
+    
+    <div style="margin-top: 20px; text-align: center;">
+        <a href="{{ url_for('export_tags_csv') }}" style="text-decoration: none; padding: 10px; background-color: #FF9800; color: white; border: none; border-radius: 5px;">Download Current Data as CSV Template</a>
+    </div>
+</div>
+{% endblock %} 
