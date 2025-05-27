@@ -412,13 +412,14 @@ def scan_rfid():
         
         # Check if item is not approved
         if not tag.approved:
-            alert_message = f"UNAPPROVED ITEM '{tag.label}' scanned at {location} at {time_now}"
+            alert_message = f"This Item '{tag.label}' is not approved to be taken at {location} at {time_now}"
+            flash(alert_message, 'danger')
             
             # Initialize alerts in session if not exists
             if 'alerts' not in session:
                 session['alerts'] = []
             
-            # Add the alert
+            # Add the alert to session for persistence
             session['alerts'].append({
                 'message': alert_message,
                 'category': 'danger',
@@ -426,6 +427,16 @@ def scan_rfid():
             })
             
             # Make sure to modify the session
+            session.modified = True
+            
+            # Store the alert in a separate session key for inventory view
+            if 'inventory_alerts' not in session:
+                session['inventory_alerts'] = []
+            session['inventory_alerts'].append({
+                'message': alert_message,
+                'category': 'danger',
+                'timestamp': time_now
+            })
             session.modified = True
     else:
         # Create new tag
@@ -507,12 +518,24 @@ def inventory_check():
             'approved': tag.approved
         }
         grouped_tags[location].append(tag)
+        
+        # Check if item is not approved and show flash message
+        if not tag.approved:
+            flash(f"This Item '{tag.label}' is not approved to be taken at {location} at {tag.time_seen}", 'danger')
     
     # Sort locations alphabetically
     locations.sort()
     
     # Check inventory for missing items and get missing status
     missing_status = check_inventory()
+    
+    # Display any stored inventory alerts
+    if 'inventory_alerts' in session:
+        for alert in session['inventory_alerts']:
+            flash(alert['message'], alert['category'])
+        # Clear the alerts after displaying them
+        session.pop('inventory_alerts', None)
+        session.modified = True
     
     # Handle JSON format request for AJAX updates
     if request.args.get('format') == 'json':
